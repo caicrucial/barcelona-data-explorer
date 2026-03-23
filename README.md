@@ -18,7 +18,7 @@ Mapa interactivo multicapa de Barcelona construido con datos abiertos del [Ajunt
 | **Equipamientos culturales** | Museos, bibliotecas, mercados, centros deportivos, teatros y patrimonio | [Open Data BCN](https://opendata-ajuntament.barcelona.cat/) |
 | **Presión turística** | Alojamientos turísticos (hoteles, hostales, apartamentos) | [Allotjaments Turístics](https://opendata-ajuntament.barcelona.cat/data/es/dataset/allotjaments-turistics) |
 | **Centros sanitarios** | Hospitales, CAPs y CUAPs | [Sanitat BCN](https://opendata-ajuntament.barcelona.cat/data/es/dataset/sanitat-salut) |
-| **Centros educativos** | ~108 centros: CEIP, IES, concertados y privados. Filtros por titularidad y nivel educativo | [Centres Educatius](https://opendata-ajuntament.barcelona.cat/data/es/dataset/centres-educatius) |
+| **Centros educativos** | ~121 centros: CEIP, IES, concertados y privados. Filtros por titularidad y nivel educativo | [Centres Educatius](https://opendata-ajuntament.barcelona.cat/data/es/dataset/centres-educatius) |
 
 ## Análisis cruzados
 
