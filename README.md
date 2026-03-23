@@ -50,12 +50,10 @@ python3 -m http.server 8000
 # Abrir http://localhost:8000 en el navegador
 ```
 
-## GitHub Pages
-
-El archivo `index.html` está listo para servir directamente desde GitHub Pages. Actívalo en **Settings → Pages → Source: Deploy from a branch → main / root**.
-
-Una vez activado estará disponible en: `https://caicrucial.github.io/barcelona-data-explorer/`
-
 ## Licencia
 
 MIT. Los datos son propiedad del Ajuntament de Barcelona bajo licencia [CC-BY](https://creativecommons.org/licenses/by/4.0/).
+
+---
+
+Para cualquier duda o sugerencia: **caicrucial@gmail.com**

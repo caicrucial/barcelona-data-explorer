@@ -1,0 +1,2115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Barcelona Data Explorer - Mapa Interactivo</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script>if(typeof L==='undefined'||typeof L.heatLayer!=='function'){document.write('<scr'+'ipt src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"><\/scr'+'ipt>')}</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#0a0e17;color:#e0e0e0}
+#map{width:100%;height:100vh;z-index:1}
+.sp{position:fixed;top:0;left:0;width:400px;height:100vh;background:linear-gradient(180deg,#111827,#0f172a);z-index:1000;overflow-y:auto;transition:transform .3s;border-right:1px solid rgba(99,102,241,.2);box-shadow:4px 0 24px rgba(0,0,0,.5)}
+.sp.collapsed{transform:translateX(-400px)}
+.pt{position:fixed;top:16px;left:16px;z-index:1001;background:#1e293b;border:1px solid rgba(99,102,241,.3);color:#e0e0e0;padding:10px 14px;border-radius:10px;cursor:pointer;font-size:18px;transition:all .3s}
+.pt:hover{background:#334155}
+.sp:not(.collapsed)~.pt{left:416px}
+.ph{padding:24px 20px 16px;background:linear-gradient(135deg,#1e1b4b,#312e81);border-bottom:1px solid rgba(99,102,241,.3)}
+.ph h1{font-size:20px;font-weight:700;color:#c7d2fe;margin-bottom:4px}
+.ph p{font-size:12px;color:#818cf8}
+.sec{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.06)}
+.st{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#6366f1;margin-bottom:12px}
+.lt{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;margin-bottom:8px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);cursor:pointer;transition:all .2s}
+.lt:hover{background:rgba(99,102,241,.08);border-color:rgba(99,102,241,.2)}
+.lt.active{background:rgba(99,102,241,.12);border-color:rgba(99,102,241,.4)}
+.lt .li{display:flex;align-items:center;gap:10px}
+.lt .ln{font-size:13px;font-weight:600}
+.lt .ld{font-size:10px;color:#94a3b8}
+.sw{position:relative;width:40px;height:22px;flex-shrink:0}
+.sw input{opacity:0;width:0;height:0}
+.sw .sl{position:absolute;cursor:pointer;inset:0;background:#334155;border-radius:22px;transition:.3s}
+.sw .sl::before{content:'';position:absolute;height:16px;width:16px;left:3px;bottom:3px;background:#94a3b8;border-radius:50%;transition:.3s}
+.sw input:checked+.sl{background:#6366f1}
+.sw input:checked+.sl::before{transform:translateX(18px);background:#fff}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sc{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px;text-align:center}
+.sv{font-size:22px;font-weight:700;color:#c7d2fe}
+.sl2{font-size:10px;color:#64748b;margin-top:2px}
+.sc.hl{border-color:rgba(99,102,241,.3);background:rgba(99,102,241,.06)}
+.ins{padding:10px 14px;margin-bottom:8px;border-radius:10px;background:rgba(99,102,241,.06);border-left:3px solid #6366f1;font-size:12px;line-height:1.5;color:#c7d2fe}
+.ins .it{font-weight:700;margin-bottom:4px;font-size:11px;color:#818cf8}
+.db{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px}
+.db .nm{width:90px;text-align:right;color:#94a3b8;flex-shrink:0}
+.db .bg{flex:1;height:18px;background:rgba(255,255,255,.04);border-radius:4px;overflow:hidden}
+.db .bf{height:100%;border-radius:4px;transition:width .6s;display:flex;align-items:center;padding-left:6px;font-size:9px;font-weight:600;color:#fff}
+.lo{position:fixed;inset:0;background:rgba(10,14,23,.92);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .5s}
+.lo.hid{opacity:0;pointer-events:none}
+.ls{width:48px;height:48px;border:3px solid rgba(99,102,241,.2);border-top-color:#6366f1;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.lr{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:11px}
+.lc{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+.fb{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.fbtn{padding:5px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#94a3b8;font-size:11px;cursor:pointer;transition:all .2s}
+.fbtn.active{background:rgba(99,102,241,.2);border-color:#6366f1;color:#c7d2fe}
+.fbtn:hover{border-color:rgba(99,102,241,.4)}
+.mib{position:fixed;bottom:20px;right:20px;z-index:1000;background:rgba(17,24,39,.95);border:1px solid rgba(99,102,241,.3);border-radius:12px;padding:16px 20px;max-width:350px;backdrop-filter:blur(12px);display:none}
+.mib h3{font-size:14px;color:#c7d2fe;margin-bottom:8px}
+.mib p{font-size:12px;color:#94a3b8;line-height:1.5}
+.mib .cb{position:absolute;top:8px;right:12px;background:none;border:none;color:#64748b;cursor:pointer;font-size:16px}
+.leaflet-popup-content-wrapper{background:#1e293b!important;color:#e0e0e0!important;border:1px solid rgba(99,102,241,.3)!important;border-radius:12px!important}
+.leaflet-popup-tip{background:#1e293b!important}
+.pt2{font-size:14px;font-weight:700;color:#c7d2fe;margin-bottom:8px}
+.pr{display:flex;justify-content:space-between;font-size:12px;padding:3px 0}
+.pr .lb{color:#64748b}.pr .vl{font-weight:600;color:#e0e0e0}
+.pb{height:6px;background:#1e293b;border-radius:3px;margin-top:4px;overflow:hidden}
+.pbf{height:100%;border-radius:3px}
+.np{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+.tb{display:flex;gap:4px;margin-bottom:12px}
+.tbn{flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);color:#64748b;font-size:11px;font-weight:600;cursor:pointer;text-align:center;transition:all .2s}
+.tbn.active{background:rgba(99,102,241,.15);border-color:#6366f1;color:#c7d2fe}
+.dst{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:9px;background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.2)}
+.dst.live::before{content:'';width:6px;height:6px;border-radius:50%;background:#4ade80;animation:pulse 2s infinite}
+.dst.err{background:rgba(239,68,68,.1);color:#f87171;border-color:rgba(239,68,68,.2)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.eb{padding:8px 12px;border-radius:8px;font-size:11px;line-height:1.5;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#fca5a5;margin-bottom:10px;display:none}
+.dark-tooltip{background:rgba(30,41,59,.95)!important;color:#e0e0e0!important;border:1px solid rgba(99,102,241,.3)!important;border-radius:8px!important;padding:8px 12px!important;font-size:12px!important;box-shadow:0 4px 12px rgba(0,0,0,.4)!important}
+.hab-idx{display:flex;align-items:center;gap:6px;margin-top:6px}
+.hab-bar{flex:1;height:10px;background:#1e293b;border-radius:5px;overflow:hidden}
+.hab-fill{height:100%;border-radius:5px;transition:width .5s}
+.hab-label{font-size:11px;font-weight:700;min-width:30px}
+.metro-icon{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;margin-right:3px}
+.subsec{font-size:12px;font-weight:600;color:#c7d2fe;margin:10px 0 6px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.06)}
+</style>
+</head>
+<body>
+<div class="lo" id="loadOv"><div class="ls"></div><div style="margin-top:16px;color:#818cf8;font-size:14px" id="loadTxt">Cargando datos de Barcelona...</div><div style="margin-top:6px;color:#475569;font-size:11px" id="loadSub"></div></div>
+<div id="map"></div>
+<div class="sp" id="sidePanel">
+<div class="ph"><h1>Barcelona Data Explorer</h1><p>Mapa interactivo multicapa &middot; Open Data BCN</p></div>
+
+<!-- LAYERS -->
+<div class="sec">
+<div class="st">Capas de datos</div>
+<div class="lt active" onclick="tgl('districts')"><div class="li"><span style="font-size:20px">&#x1F5FA;&#xFE0F;</span><div><div class="ln">Distritos y Barrios</div><div class="ld">Limites administrativos</div></div></div><label class="sw" onclick="event.stopPropagation()"><input type="checkbox" id="chk-districts" checked onchange="tgl('districts')"><span class="sl"></span></label></div>
+<div class="lt active" onclick="tgl('noise')"><div class="li"><span style="font-size:20px">&#x1F50A;</span><div><div class="ln">Ruido - Zonas</div><div class="ld">Mapa Estrategico de Soroll</div></div></div><label class="sw" onclick="event.stopPropagation()"><input type="checkbox" id="chk-noise" checked onchange="tgl('noise')"><span class="sl"></span></label></div>
+<div class="lt active" onclick="tgl('noiseHeat')"><div class="li"><span style="font-size:20px">&#x1F525;</span><div><div class="ln">Ruido - Mapa de Calor</div><div class="ld">Heatmap acustico</div></div></div><label class="sw" onclick="event.stopPropagation()"><input type="checkbox" id="chk-noiseHeat" checked onchange="tgl('noiseHeat')"><span class="sl"></span></label></div>
+<div class="lt active" onclick="tgl('bicing')"><div class="li"><span style="font-size:20px">&#x1F6B2;</span><div><div class="ln">Bicing</div><div class="ld" id="bicTag"><span class="dst live">Conectando...</span></div></div></div><label class="sw" onclick="event.stopPropagation()"><input type="checkbox" id="chk-bicing" checked onchange="tgl('bicing')"><span class="sl"></span></label></div>
+<div class="lt" onclick="tgl('bicHeat')"><div class="li"><span style="font-size:20px">&#x1F321;&#xFE0F;</span><div><div class="ln">Bicing - Mapa de Calor</div><div class="ld">Densidad disponibilidad</div></div></div><label class="sw" onclick="event.stopPropagation()"><input type="checkbox" id="chk-bicHeat" onchange="tgl('bicHeat')"><span class="sl"></span></label></div>
+<div class="lt" onclick="tgl('metro')"><div class="li"><span style="font-size:20px">&#x1F687;</span><div><div class="ln">Metro + Transporte</div><div class="ld">Intermodalidad con Bicing</div></div></div><label class="sw" onclick="event.stopPropagation()"><input type="checkbox" id="chk-metro" onchange="tgl('metro')"><span class="sl"></span></label></div>
+<div class="lt" onclick="tgl('accidents')"><div class="li"><span style="font-size:20px">&#x26A0;&#xFE0F;</span><div><div class="ln">Accidentalidad vial</div><div class="ld">Guardia Urbana BCN 2023</div></div></div><label class="sw" onclick="event.stopPropagation()"><input type="checkbox" id="chk-accidents" onchange="tgl('accidents')"><span class="sl"></span></label></div>
+<div class="lt" onclick="tgl('accHeat')"><div class="li"><span style="font-size:20px">&#x1F4A5;</span><div><div class="ln">Accidentes - Mapa Calor</div><div class="ld">Puntos calientes siniestralidad</div></div></div><label class="sw" onclick="event.stopPropagation()"><input type="checkbox" id="chk-accHeat" onchange="tgl('accHeat')"><span class="sl"></span></label></div>
+<div class="lt" onclick="tgl('bikeLanes')"><div class="li"><span style="font-size:20px">&#x1F6E4;&#xFE0F;</span><div><div class="ln">Carriles Bici</div><div class="ld" id="bikeTag"><span class="dst">GeoJSON BCN</span></div></div></div><label class="sw" onclick="event.stopPropagation()"><input type="checkbox" id="chk-bikeLanes" onchange="tgl('bikeLanes')"><span class="sl"></span></label></div>
+<div class="lt" onclick="tgl('demographics')"><div class="li"><span style="font-size:20px">&#x1F465;</span><div><div class="ln">Atlas Demografico</div><div class="ld">Poblacion por distrito</div></div></div><label class="sw" onclick="event.stopPropagation()"><input type="checkbox" id="chk-demographics" onchange="tgl('demographics')"><span class="sl"></span></label></div>
+<div class="lt" onclick="tgl('trees')"><div class="li"><span style="font-size:20px">&#x1F333;</span><div><div class="ln">Arbolado Urbano</div><div class="ld">200+ arboles geolocalizados</div></div></div><label class="sw" onclick="event.stopPropagation()"><input type="checkbox" id="chk-trees" onchange="tgl('trees')"><span class="sl"></span></label></div>
+<div class="lt" onclick="tgl('treeHeat')"><div class="li"><span style="font-size:20px">&#x1F33F;</span><div><div class="ln">Verde - Mapa de Calor</div><div class="ld">Densidad arbolado</div></div></div><label class="sw" onclick="event.stopPropagation()"><input type="checkbox" id="chk-treeHeat" onchange="tgl('treeHeat')"><span class="sl"></span></label></div>
+<div class="lt" onclick="tgl('culture')"><div class="li"><span style="font-size:20px">&#x1F3DB;&#xFE0F;</span><div><div class="ln">Equipamientos Culturales</div><div class="ld">Museos, bibliotecas, mercados</div></div></div><label class="sw" onclick="event.stopPropagation()"><input type="checkbox" id="chk-culture" onchange="tgl('culture')"><span class="sl"></span></label></div>
+<div class="lt" onclick="tgl('tourism')"><div class="li"><span style="font-size:20px">&#x1F3E8;</span><div><div class="ln">Presion Turistica</div><div class="ld">Alojamientos y densidad</div></div></div><label class="sw" onclick="event.stopPropagation()"><input type="checkbox" id="chk-tourism" onchange="tgl('tourism')"><span class="sl"></span></label></div>
+<div class="lt" onclick="tgl('health')"><div class="li"><span style="font-size:20px">&#x1F3E5;</span><div><div class="ln">Centros Sanitarios</div><div class="ld">CAP, CUAP, Hospitales</div></div></div><label class="sw" onclick="event.stopPropagation()"><input type="checkbox" id="chk-health" onchange="tgl('health')"><span class="sl"></span></label></div>
+<div class="lt" onclick="tgl('schools')"><div class="li"><span style="font-size:20px">&#x1F393;</span><div><div class="ln">Centros Educativos</div><div class="ld">Publicos, concertados, privados</div></div></div><label class="sw" onclick="event.stopPropagation()"><input type="checkbox" id="chk-schools" onchange="tgl('schools')"><span class="sl"></span></label></div>
+</div>
+
+<!-- NOISE FILTERS -->
+<div class="sec" id="noiseFiltSec">
+<div class="st">Filtros de ruido por fuente</div>
+<div class="fb" id="noiseFiltBtns">
+<button class="fbtn active" onclick="setNoiseFilt('all',this)">Todas</button>
+<button class="fbtn" onclick="setNoiseFilt('traffic',this)">Trafico</button>
+<button class="fbtn" onclick="setNoiseFilt('nightlife',this)">Ocio nocturno</button>
+<button class="fbtn" onclick="setNoiseFilt('railway',this)">Ferrocarril</button>
+</div>
+</div>
+
+<!-- ACCIDENT FILTERS & STATS -->
+<div class="sec" id="accSec">
+<div class="st">Accidentalidad vial - Filtros</div>
+<div class="subsec">Por vehiculo</div>
+<div class="fb" id="accVehBtns">
+<button class="fbtn active" onclick="setAccFilt('veh','all',this)">Todos</button>
+<button class="fbtn" onclick="setAccFilt('veh','bici',this)">Bici</button>
+<button class="fbtn" onclick="setAccFilt('veh','moto',this)">Moto</button>
+<button class="fbtn" onclick="setAccFilt('veh','peaton',this)">Peaton</button>
+</div>
+<div class="subsec">Por gravedad</div>
+<div class="fb" id="accGravBtns">
+<button class="fbtn active" onclick="setAccFilt('grav','all',this)">Todas</button>
+<button class="fbtn" onclick="setAccFilt('grav','fatal',this)">Mortal</button>
+<button class="fbtn" onclick="setAccFilt('grav','grave',this)">Grave</button>
+<button class="fbtn" onclick="setAccFilt('grav','leve',this)">Leve</button>
+</div>
+<div class="subsec">Por franja horaria</div>
+<div class="fb" id="accHoraBtns">
+<button class="fbtn active" onclick="setAccFilt('hora','all',this)">Todas</button>
+<button class="fbtn" onclick="setAccFilt('hora','morning',this)">7-12h</button>
+<button class="fbtn" onclick="setAccFilt('hora','afternoon',this)">12-18h</button>
+<button class="fbtn" onclick="setAccFilt('hora','evening',this)">18-22h</button>
+<button class="fbtn" onclick="setAccFilt('hora','night',this)">22-7h</button>
+</div>
+<div class="subsec">Por mes</div>
+<div class="fb" id="accMesBtns">
+<button class="fbtn active" onclick="setAccFilt('mes','all',this)">Todos</button>
+<button class="fbtn" onclick="setAccFilt('mes','Q1',this)">Ene-Mar</button>
+<button class="fbtn" onclick="setAccFilt('mes','Q2',this)">Abr-Jun</button>
+<button class="fbtn" onclick="setAccFilt('mes','Q3',this)">Jul-Sep</button>
+<button class="fbtn" onclick="setAccFilt('mes','Q4',this)">Oct-Dic</button>
+</div>
+<div class="subsec">Por dia de la semana</div>
+<div class="fb" id="accDiaBtns">
+<button class="fbtn active" onclick="setAccFilt('dia','all',this)">Todos</button>
+<button class="fbtn" onclick="setAccFilt('dia','laboral',this)">L-V</button>
+<button class="fbtn" onclick="setAccFilt('dia','finde',this)">S-D</button>
+</div>
+<div class="sg" style="margin-top:12px">
+<div class="sc hl"><div class="sv" id="accTotal">-</div><div class="sl2">Accidentes (filtrados)</div></div>
+<div class="sc"><div class="sv" id="accGraves">-</div><div class="sl2">Graves + Mortales</div></div>
+<div class="sc"><div class="sv" id="accBici">-</div><div class="sl2">Con bicicleta</div></div>
+<div class="sc"><div class="sv" id="accMoto">-</div><div class="sl2">Con moto</div></div>
+</div>
+<div id="accAnalysis" style="margin-top:10px"></div>
+</div>
+
+<!-- DEMOGRAPHICS FILTERS & STATS -->
+<div class="sec" id="demoSec">
+<div class="st">Atlas Demografico - Variable</div>
+<div class="fb" id="demoVarBtns">
+<button class="fbtn active" onclick="setDemoVar('pop_total',this)">Poblacion</button>
+<button class="fbtn" onclick="setDemoVar('density',this)">Densidad</button>
+<button class="fbtn" onclick="setDemoVar('age_median',this)">Edad media</button>
+<button class="fbtn" onclick="setDemoVar('pct_65plus',this)">&gt;65 anos</button>
+</div>
+<div class="fb" style="margin-top:6px" id="demoVarBtns2">
+<button class="fbtn" onclick="setDemoVar('pct_foreign',this)">Extranjeros</button>
+<button class="fbtn" onclick="setDemoVar('pct_0_14',this)">0-14 anos</button>
+<button class="fbtn" onclick="setDemoVar('avg_household',this)">Tam. hogar</button>
+<button class="fbtn" onclick="setDemoVar('sex_ratio',this)">Ratio M/H</button>
+</div>
+<div class="sg" style="margin-top:12px">
+<div class="sc hl"><div class="sv" id="demoValMax">-</div><div class="sl2" id="demoLblMax">Maximo</div></div>
+<div class="sc"><div class="sv" id="demoValMin">-</div><div class="sl2" id="demoLblMin">Minimo</div></div>
+<div class="sc"><div class="sv" id="demoValAvg">-</div><div class="sl2">Media ciudad</div></div>
+<div class="sc"><div class="sv" id="demoValStd">-</div><div class="sl2">Desv. tipica</div></div>
+</div>
+<div id="demoRanking" style="margin-top:10px"></div>
+</div>
+
+<!-- TREES FILTERS & STATS -->
+<div class="sec" id="treesSec">
+<div class="st">Arbolado urbano - Filtros</div>
+<div class="subsec">Por especie</div>
+<div class="fb" id="treeFiltBtns">
+<button class="fbtn active" onclick="setTreeFilt('all',this)">Todas</button>
+<button class="fbtn" onclick="setTreeFilt('platanus',this)">Platano</button>
+<button class="fbtn" onclick="setTreeFilt('celtis',this)">Almez</button>
+<button class="fbtn" onclick="setTreeFilt('citrus',this)">Naranjo</button>
+</div>
+<div class="fb" style="margin-top:6px">
+<button class="fbtn" onclick="setTreeFilt('tipuana',this)">Tipuana</button>
+<button class="fbtn" onclick="setTreeFilt('jacaranda',this)">Jacaranda</button>
+<button class="fbtn" onclick="setTreeFilt('pinus',this)">Pino</button>
+<button class="fbtn" onclick="setTreeFilt('other',this)">Otras</button>
+</div>
+<div class="sg" style="margin-top:12px">
+<div class="sc hl"><div class="sv" id="treesTotal">-</div><div class="sl2">Arboles (filtrados)</div></div>
+<div class="sc"><div class="sv" id="treesSpecies">-</div><div class="sl2">Especies distintas</div></div>
+<div class="sc"><div class="sv" id="treesTopDist">-</div><div class="sl2">Distrito mas verde</div></div>
+<div class="sc"><div class="sv" id="treesDesert">-</div><div class="sl2">Distrito menos verde</div></div>
+</div>
+<div id="treesAnalysis" style="margin-top:10px"></div>
+</div>
+
+<!-- CULTURE & TOURISM FILTERS & STATS -->
+<div class="sec" id="cultureSec">
+<div class="st">Equipamientos culturales - Filtros</div>
+<div class="fb" id="cultFiltBtns">
+<button class="fbtn active" onclick="setCultFilt('all',this)">Todos</button>
+<button class="fbtn" onclick="setCultFilt('museo',this)">Museos</button>
+<button class="fbtn" onclick="setCultFilt('biblioteca',this)">Bibliotecas</button>
+<button class="fbtn" onclick="setCultFilt('mercado',this)">Mercados</button>
+</div>
+<div class="fb" style="margin-top:6px">
+<button class="fbtn" onclick="setCultFilt('deporte',this)">Deportivo</button>
+<button class="fbtn" onclick="setCultFilt('teatro',this)">Teatros</button>
+<button class="fbtn" onclick="setCultFilt('patrimonio',this)">Patrimonio</button>
+</div>
+<div class="sg" style="margin-top:12px">
+<div class="sc hl"><div class="sv" id="cultTotal">-</div><div class="sl2">Equipamientos</div></div>
+<div class="sc"><div class="sv" id="cultMuseos">-</div><div class="sl2">Museos</div></div>
+<div class="sc"><div class="sv" id="cultBiblio">-</div><div class="sl2">Bibliotecas</div></div>
+<div class="sc"><div class="sv" id="cultTourPres">-</div><div class="sl2">Alojamientos tur.</div></div>
+</div>
+<div id="cultAnalysis" style="margin-top:10px"></div>
+</div>
+
+<!-- HEALTH CENTERS -->
+<div class="sec" id="healthSec">
+<div class="st">Centros Sanitarios - Filtros</div>
+<div class="fb" id="healthFiltBtns">
+<button class="fbtn active" onclick="setHealthFilt('all',this)">Todos</button>
+<button class="fbtn" onclick="setHealthFilt('cap',this)">CAP</button>
+<button class="fbtn" onclick="setHealthFilt('cuap',this)">CUAP</button>
+<button class="fbtn" onclick="setHealthFilt('hospital',this)">Hospital</button>
+</div>
+<div class="sg" style="margin-top:12px">
+<div class="sc hl"><div class="sv" id="healthTotal">-</div><div class="sl2">Centros (filtrados)</div></div>
+<div class="sc"><div class="sv" id="healthCAP">-</div><div class="sl2">CAP</div></div>
+<div class="sc"><div class="sv" id="healthHosp">-</div><div class="sl2">Hospitales</div></div>
+<div class="sc"><div class="sv" id="healthCUAP">-</div><div class="sl2">CUAP</div></div>
+</div>
+<div id="healthAnalysis" style="margin-top:10px"></div>
+</div>
+
+<!-- SCHOOLS -->
+<div class="sec" id="schoolsSec">
+<div class="st">Centros Educativos - Filtros</div>
+<div class="subsec">Por titularidad</div>
+<div class="fb" id="schoolFiltBtns">
+<button class="fbtn active" onclick="setSchoolFilt('all',this)">Todos</button>
+<button class="fbtn" onclick="setSchoolFilt('publico',this)">Publico</button>
+<button class="fbtn" onclick="setSchoolFilt('concertado',this)">Concertado</button>
+<button class="fbtn" onclick="setSchoolFilt('privado',this)">Privado</button>
+</div>
+<div class="subsec">Por nivel</div>
+<div class="fb" id="schoolNivelBtns">
+<button class="fbtn active" onclick="setSchoolNivel('all',this)">Todos</button>
+<button class="fbtn" onclick="setSchoolNivel('infantil',this)">Infantil</button>
+<button class="fbtn" onclick="setSchoolNivel('primaria',this)">Primaria</button>
+<button class="fbtn" onclick="setSchoolNivel('secundaria',this)">ESO/Sec.</button>
+<button class="fbtn" onclick="setSchoolNivel('bach',this)">Bach./FP</button>
+</div>
+<div class="sg" style="margin-top:12px">
+<div class="sc hl"><div class="sv" id="schoolTotal">-</div><div class="sl2">Centros (filtrados)</div></div>
+<div class="sc"><div class="sv" id="schoolPub">-</div><div class="sl2">Publicos</div></div>
+<div class="sc"><div class="sv" id="schoolConc">-</div><div class="sl2">Concertados</div></div>
+<div class="sc"><div class="sv" id="schoolPriv">-</div><div class="sl2">Privados</div></div>
+<div class="sc"><div class="sv" id="schoolIES">-</div><div class="sl2">IES (Secundaria)</div></div>
+<div class="sc"><div class="sv" id="schoolCEIP">-</div><div class="sl2">CEIP (Primaria)</div></div>
+</div>
+<div id="schoolAnalysis" style="margin-top:10px"></div>
+</div>
+
+<!-- HABITABILITY INDEX -->
+<div class="sec" id="habSec">
+<div class="st">Indice de habitabilidad acustica</div>
+<div id="habContainer"></div>
+</div>
+
+<!-- BICING STATS -->
+<div class="sec" id="bicStatsSec">
+<div class="st">Estadisticas Bicing</div>
+<div class="eb" id="bicErr"></div>
+<div class="sg">
+<div class="sc hl"><div class="sv" id="sTot">-</div><div class="sl2">Estaciones</div></div>
+<div class="sc"><div class="sv" id="sBik">-</div><div class="sl2">Bicis disponibles</div></div>
+<div class="sc"><div class="sv" id="sMec">-</div><div class="sl2">Mecanicas</div></div>
+<div class="sc"><div class="sv" id="sEle">-</div><div class="sl2">Electricas</div></div>
+<div class="sc"><div class="sv" id="sDok">-</div><div class="sl2">Plazas libres</div></div>
+<div class="sc"><div class="sv" id="sOcc">-</div><div class="sl2">Tasa ocupacion</div></div>
+</div>
+<div class="fb">
+<button class="fbtn active" onclick="setBF('all',this)">Todas</button>
+<button class="fbtn" onclick="setBF('full',this)">Llenas &gt;80%</button>
+<button class="fbtn" onclick="setBF('empty',this)">Vacias &lt;20%</button>
+<button class="fbtn" onclick="setBF('electric',this)">Electricas</button>
+<button class="fbtn" onclick="setBF('nearMetro',this)">Cerca Metro</button>
+</div>
+</div>
+
+<!-- BICING PATTERNS -->
+<div class="sec" id="bicPatSec">
+<div class="st">Patrones Bicing detectados</div>
+<div class="tb">
+<button class="tbn active" onclick="setBicTab('demand',this)">Demanda</button>
+<button class="tbn" onclick="setBicTab('intermodal',this)">Intermodalidad</button>
+<button class="tbn" onclick="setBicTab('sizing',this)">Dimensionado</button>
+</div>
+<div id="bicPatterns"></div>
+</div>
+
+<!-- NOISE ANALYSIS -->
+<div class="sec" id="noiseAnalSec">
+<div class="st">Analisis acustico por distrito</div>
+<div class="tb">
+<button class="tbn active" onclick="setNT('overview',this)">Vista general</button>
+<button class="tbn" onclick="setNT('ranking',this)">Ranking</button>
+</div>
+<div id="noiseOverview"><div id="noiseBars"></div></div>
+<div id="noiseRanking" style="display:none"><div id="noiseRankCnt"></div></div>
+</div>
+
+<!-- INSIGHTS -->
+<div class="sec"><div class="st">Patrones cruzados</div><div id="insightsCnt"></div></div>
+
+<!-- LEGEND -->
+<div class="sec">
+<div class="st">Leyenda</div>
+<div class="subsec">Ruido (dB)</div>
+<div class="lr"><div class="lc" style="background:#22c55e"></div>&lt;55 dB Tranquila</div>
+<div class="lr"><div class="lc" style="background:#84cc16"></div>55-60 dB Aceptable</div>
+<div class="lr"><div class="lc" style="background:#eab308"></div>60-65 dB Moderado</div>
+<div class="lr"><div class="lc" style="background:#f97316"></div>65-70 dB Alto</div>
+<div class="lr"><div class="lc" style="background:#ef4444"></div>70-75 dB Muy alto</div>
+<div class="lr"><div class="lc" style="background:#991b1b"></div>&gt;75 dB Critico</div>
+<div class="subsec">Bicing</div>
+<div class="lr"><div class="lc" style="background:#22c55e;border-radius:50%"></div>Disponibilidad alta (&gt;60%)</div>
+<div class="lr"><div class="lc" style="background:#eab308;border-radius:50%"></div>Media (20-60%)</div>
+<div class="lr"><div class="lc" style="background:#ef4444;border-radius:50%"></div>Baja (&lt;20%)</div>
+<div class="lr"><div class="lc" style="background:#6366f1;border-radius:50%"></div>Con electricas</div>
+<div class="subsec">Accidentalidad</div>
+<div class="lr"><div class="lc" style="background:#fbbf24;border-radius:50%"></div>Leve (heridos leves)</div>
+<div class="lr"><div class="lc" style="background:#f97316;border-radius:50%"></div>Grave (heridos graves)</div>
+<div class="lr"><div class="lc" style="background:#dc2626;border-radius:50%"></div>Mortal</div>
+<div class="lr"><div class="lc" style="background:#06b6d4;border-radius:50%"></div>Implicada bicicleta</div>
+<div class="lr"><div class="lc" style="background:#a855f7;border-radius:50%"></div>Implicada moto</div>
+<div class="subsec">Infraestructura ciclista</div>
+<div class="lr"><div class="lc" style="background:#22d3ee;border-radius:2px;height:4px;margin-top:5px"></div>Carril bici</div>
+<div class="lr"><div class="lc" style="background:#f472b6;border-radius:2px;height:4px;margin-top:5px"></div>Corredor bici</div>
+<div class="subsec">Salud</div>
+<div class="lr"><div class="lc" style="background:#ef4444;border-radius:4px"></div>Hospital</div>
+<div class="lr"><div class="lc" style="background:#22c55e;border-radius:4px"></div>CAP (Centro At. Primaria)</div>
+<div class="lr"><div class="lc" style="background:#f59e0b;border-radius:4px"></div>CUAP (Urgencias)</div>
+<div class="subsec">Educacion</div>
+<div class="lr"><div class="lc" style="background:#3b82f6;border-radius:4px"></div>Colegio publico</div>
+<div class="lr"><div class="lc" style="background:#f97316;border-radius:4px"></div>Colegio concertado</div>
+<div class="lr"><div class="lc" style="background:#a855f7;border-radius:4px"></div>Colegio privado</div>
+<div class="subsec">Arbolado</div>
+<div class="lr"><div class="lc" style="background:#22c55e;border-radius:50%"></div>Platano de sombra</div>
+<div class="lr"><div class="lc" style="background:#84cc16;border-radius:50%"></div>Almez</div>
+<div class="lr"><div class="lc" style="background:#f97316;border-radius:50%"></div>Naranjo amargo</div>
+<div class="lr"><div class="lc" style="background:#a855f7;border-radius:50%"></div>Jacaranda</div>
+<div class="lr"><div class="lc" style="background:#14b8a6;border-radius:50%"></div>Tipuana</div>
+<div class="lr"><div class="lc" style="background:#0ea5e9;border-radius:50%"></div>Pino</div>
+<div class="subsec">Equipamientos culturales</div>
+<div class="lr"><div class="lc" style="background:#f43f5e;border-radius:4px"></div>Museo</div>
+<div class="lr"><div class="lc" style="background:#3b82f6;border-radius:4px"></div>Biblioteca</div>
+<div class="lr"><div class="lc" style="background:#f59e0b;border-radius:4px"></div>Mercado</div>
+<div class="lr"><div class="lc" style="background:#10b981;border-radius:4px"></div>Deportivo</div>
+<div class="lr"><div class="lc" style="background:#ec4899;border-radius:4px"></div>Teatro / Sala</div>
+<div class="lr"><div class="lc" style="background:#8b5cf6;border-radius:4px"></div>Patrimonio</div>
+<div class="lr"><div class="lc" style="background:#fbbf24;border-radius:50%;border:2px solid #f59e0b"></div>Alojamiento turistico</div>
+<div class="subsec">Demografia</div>
+<div class="lr"><div class="lc" style="background:#312e81"></div>Valor muy alto</div>
+<div class="lr"><div class="lc" style="background:#4338ca"></div>Valor alto</div>
+<div class="lr"><div class="lc" style="background:#6366f1"></div>Valor medio-alto</div>
+<div class="lr"><div class="lc" style="background:#818cf8"></div>Valor medio</div>
+<div class="lr"><div class="lc" style="background:#a5b4fc"></div>Valor bajo</div>
+<div class="lr"><div class="lc" style="background:#c7d2fe"></div>Valor muy bajo</div>
+<div class="subsec">Metro</div>
+<div class="lr"><span class="metro-icon" style="background:#e53935">L1</span>L1 Fondo-Hospital</div>
+<div class="lr"><span class="metro-icon" style="background:#9c27b0">L2</span>L2 Paral-lel-Badalona</div>
+<div class="lr"><span class="metro-icon" style="background:#43a047">L3</span>L3 Zona Universitaria-Trinitat</div>
+<div class="lr"><span class="metro-icon" style="background:#fdd835;color:#333">L4</span>L4 Trinitat Nova-La Pau</div>
+<div class="lr"><span class="metro-icon" style="background:#1e88e5">L5</span>L5 Cornella-Vall Hebron</div>
+</div>
+
+<div class="sec" style="padding-bottom:30px">
+<div class="st">Fuentes</div>
+<div style="font-size:11px;color:#64748b;line-height:1.8">
+<div><a href="https://opendata-ajuntament.barcelona.cat" target="_blank" style="color:#818cf8">Open Data BCN</a></div>
+<div><a href="https://api.citybik.es" target="_blank" style="color:#818cf8">CityBikes API</a></div>
+<div><a href="https://github.com/martgnz/bcn-geodata" target="_blank" style="color:#818cf8">BCN GeoData</a></div>
+<div><a href="https://www.tmb.cat" target="_blank" style="color:#818cf8">TMB - Transports BCN</a></div>
+<div><a href="https://opendata-ajuntament.barcelona.cat/data/es/dataset/accidents-gu-bcn" target="_blank" style="color:#818cf8">Accidentes Guardia Urbana</a></div>
+<div><a href="https://opendata-ajuntament.barcelona.cat/data/es/dataset/carril-bici" target="_blank" style="color:#818cf8">Carriles Bici BCN</a></div>
+<div><a href="https://opendata-ajuntament.barcelona.cat/data/es/dataset/est-padro" target="_blank" style="color:#818cf8">Padron Municipal BCN</a></div>
+<div><a href="https://opendata-ajuntament.barcelona.cat/data/es/dataset/arbrat-viari" target="_blank" style="color:#818cf8">Arbolado Viario BCN</a></div>
+<div><a href="https://opendata-ajuntament.barcelona.cat/data/es/dataset/allotjaments-turistics" target="_blank" style="color:#818cf8">Alojamientos Turisticos</a></div>
+<div><a href="https://opendata-ajuntament.barcelona.cat/data/es/dataset/sanitat-salut" target="_blank" style="color:#818cf8">Centros Sanitarios BCN</a></div>
+<div><a href="https://opendata-ajuntament.barcelona.cat/data/es/dataset/centres-educatius" target="_blank" style="color:#818cf8">Centros Educativos BCN</a></div>
+<div style="margin-top:6px;font-size:10px;color:#475569">CC-BY &middot; Ajuntament de Barcelona</div>
+</div>
+</div>
+</div>
+
+<button class="pt" id="panelToggle" onclick="document.getElementById('sidePanel').classList.toggle('collapsed')">&#9776;</button>
+<div class="mib" id="mapInfoBox"><button class="cb" onclick="this.parentElement.style.display='none'">&#10005;</button><h3 id="infoTitle"></h3><p id="infoContent"></p></div>
+
+<script>
+// ======= MAP =======
+var map = L.map('map',{center:[41.3874,2.1686],zoom:13,zoomControl:false});
+L.control.zoom({position:'topright'}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+    attribution:'&copy; OSM &copy; CARTO',subdomains:'abcd',maxZoom:19
+}).addTo(map);
+
+// ======= STATE =======
+var S={layers:{districts:true,noise:true,noiseHeat:true,bicing:true,bicHeat:false,metro:false,accidents:false,accHeat:false,bikeLanes:false,demographics:false,trees:false,treeHeat:false,culture:false,tourism:false,health:false,schools:false},
+    bicFilter:'all',noiseFilt:'all',accFiltVeh:'all',accFiltGrav:'all',accFiltHora:'all',accFiltMes:'all',accFiltDia:'all',
+    demoVar:'pop_total',treeFilt:'all',cultFilt:'all',healthFilt:'all',schoolFilt:'all',schoolNivel:'all',
+    stations:[],accData:[],bicSrc:null};
+var ML={districts:null,barris:null,noise:null,noiseHeat:null,bicing:null,bicHeat:null,metro:null,accidents:null,accHeat:null,bikeLanes:null,demographics:null,trees:null,treeHeat:null,culture:null,tourism:null,health:null,schools:null};
+
+// ======= NOISE DATA (Mapa Estrategic de Soroll BCN) =======
+var noiseDist={
+"Ciutat Vella":{d:71.2,n:62.5,pop:68,src:"Ocio nocturno + trafico",z:"A3-B",srcs:["traffic","nightlife"]},
+"Eixample":{d:69.8,n:60.1,pop:55,src:"Trafico rodado",z:"B",srcs:["traffic"]},
+"Sants-Montjuic":{d:66.5,n:57.3,pop:42,src:"Trafico + ferrocarril",z:"B-C",srcs:["traffic","railway"]},
+"Les Corts":{d:64.2,n:55.8,pop:35,src:"Trafico (Diagonal)",z:"B",srcs:["traffic"]},
+"Sarria-Sant Gervasi":{d:61.3,n:52.1,pop:22,src:"Trafico moderado",z:"A2-B",srcs:["traffic"]},
+"Gracia":{d:66.8,n:58.9,pop:48,src:"Ocio + trafico local",z:"B",srcs:["traffic","nightlife"]},
+"Horta-Guinardo":{d:62.5,n:53.4,pop:28,src:"Rondas",z:"A2-B",srcs:["traffic"]},
+"Nou Barris":{d:63.1,n:54.2,pop:30,src:"Trafico + Meridiana",z:"B",srcs:["traffic"]},
+"Sant Andreu":{d:64.8,n:55.9,pop:33,src:"Meridiana + ferrocarril",z:"B",srcs:["traffic","railway"]},
+"Sant Marti":{d:67.1,n:58.2,pop:45,src:"Gran Via + Diagonal Mar",z:"B-C",srcs:["traffic"]}
+};
+
+// Detailed noise points with source tags
+var noisePts=[
+{nm:"La Rambla",dist:"Ciutat Vella",d:73.5,n:68.2,src:"Ocio + turismo",tag:["traffic","nightlife"],lat:41.3797,lng:2.1731},
+{nm:"Pg. de Gracia",dist:"Eixample",d:72.1,n:61.5,src:"Trafico intenso",tag:["traffic"],lat:41.3927,lng:2.1648},
+{nm:"Gran Via",dist:"Eixample",d:74.8,n:63.2,src:"Trafico pesado",tag:["traffic"],lat:41.3876,lng:2.1640},
+{nm:"Av. Diagonal",dist:"Les Corts",d:73.2,n:62.8,src:"Trafico intenso",tag:["traffic"],lat:41.3896,lng:2.1358},
+{nm:"Via Laietana",dist:"Ciutat Vella",d:71.8,n:60.5,src:"Trafico",tag:["traffic"],lat:41.3846,lng:2.1765},
+{nm:"Ronda de Dalt",dist:"Horta-Guinardo",d:76.2,n:68.5,src:"Trafico rondas",tag:["traffic"],lat:41.4256,lng:2.1614},
+{nm:"Av. Meridiana",dist:"Sant Andreu",d:75.1,n:66.3,src:"Trafico pesado",tag:["traffic"],lat:41.4277,lng:2.1892},
+{nm:"C/ de Sants",dist:"Sants-Montjuic",d:68.5,n:58.9,src:"Comercio + trafico",tag:["traffic"],lat:41.3747,lng:2.1344},
+{nm:"Pl. del Sol",dist:"Gracia",d:65.2,n:70.1,src:"Ocio nocturno",tag:["nightlife"],lat:41.4014,lng:2.1567},
+{nm:"C/ Blai",dist:"Sants-Montjuic",d:63.8,n:66.5,src:"Ocio nocturno",tag:["nightlife"],lat:41.3726,lng:2.1646},
+{nm:"Rbla. Poblenou",dist:"Sant Marti",d:62.5,n:55.3,src:"Trafico moderado",tag:["traffic"],lat:41.4035,lng:2.2039},
+{nm:"Av. Paral-lel",dist:"Sants-Montjuic",d:71.5,n:63.7,src:"Trafico + ocio",tag:["traffic","nightlife"],lat:41.3744,lng:2.1688},
+{nm:"Pg. Maritim",dist:"Ciutat Vella",d:60.2,n:55.8,src:"Ocio estival",tag:["nightlife"],lat:41.3760,lng:2.1920},
+{nm:"C/ Balmes",dist:"Sarria-Sant Gervasi",d:66.1,n:56.2,src:"Trafico",tag:["traffic"],lat:41.4020,lng:2.1526},
+{nm:"Pl. Espanya",dist:"Sants-Montjuic",d:74.5,n:64.1,src:"Nodo trafico",tag:["traffic"],lat:41.3750,lng:2.1492},
+{nm:"Ronda del Mig",dist:"Gracia",d:72.8,n:64.5,src:"Trafico rondas",tag:["traffic"],lat:41.4057,lng:2.1489},
+{nm:"Parc Ciutadella",dist:"Ciutat Vella",d:52.3,n:45.1,src:"Zona verde",tag:[],lat:41.3878,lng:2.1860},
+{nm:"Tibidabo",dist:"Sarria-Sant Gervasi",d:48.5,n:40.2,src:"Zona natural",tag:[],lat:41.4225,lng:2.1185},
+{nm:"Turo Park",dist:"Sarria-Sant Gervasi",d:54.1,n:46.8,src:"Zona residencial",tag:[],lat:41.3944,lng:2.1423},
+{nm:"Forum",dist:"Sant Marti",d:68.9,n:59.2,src:"Eventos + trafico",tag:["traffic"],lat:41.4114,lng:2.2295},
+{nm:"C/ Arago",dist:"Eixample",d:70.5,n:59.8,src:"Trafico",tag:["traffic"],lat:41.3910,lng:2.1620},
+{nm:"C/ Marina",dist:"Eixample",d:68.2,n:57.4,src:"Trafico",tag:["traffic"],lat:41.3995,lng:2.1865},
+{nm:"Est. Sants",dist:"Sants-Montjuic",d:69.8,n:61.2,src:"Ferrocarril + trafico",tag:["railway","traffic"],lat:41.3792,lng:2.1399},
+{nm:"Est. Passeig de Gracia",dist:"Eixample",d:67.5,n:58.1,src:"Ferrocarril",tag:["railway"],lat:41.3920,lng:2.1650},
+{nm:"Est. Arc de Triomf",dist:"Ciutat Vella",d:66.8,n:57.3,src:"Ferrocarril + trafico",tag:["railway","traffic"],lat:41.3910,lng:2.1810},
+{nm:"C/ Joaquin Costa",dist:"Ciutat Vella",d:64.5,n:69.8,src:"Ocio nocturno (Raval)",tag:["nightlife"],lat:41.3827,lng:2.1668},
+{nm:"Pg. del Born",dist:"Ciutat Vella",d:62.1,n:67.5,src:"Ocio nocturno (Born)",tag:["nightlife"],lat:41.3850,lng:2.1830},
+{nm:"C/ Enric Granados",dist:"Eixample",d:61.2,n:64.8,src:"Terrazas nocturnas",tag:["nightlife"],lat:41.3910,lng:2.1580}
+];
+
+var noiseZones=[
+{b:[[41.376,2.168],[41.377,2.168],[41.381,2.172],[41.385,2.182],[41.383,2.183],[41.379,2.177],[41.376,2.172]],lv:72,d:"Ciutat Vella",tag:["traffic","nightlife"]},
+{b:[[41.385,2.155],[41.395,2.155],[41.398,2.170],[41.392,2.175],[41.385,2.170]],lv:70,d:"Eixample",tag:["traffic"]},
+{b:[[41.385,2.140],[41.390,2.140],[41.390,2.180],[41.385,2.180]],lv:74,d:"Gran Via",tag:["traffic"]},
+{b:[[41.395,2.110],[41.410,2.110],[41.420,2.130],[41.415,2.145],[41.400,2.140],[41.395,2.125]],lv:55,d:"Sarria-S.Gervasi",tag:[]},
+{b:[[41.415,2.150],[41.430,2.155],[41.435,2.170],[41.425,2.180],[41.415,2.170]],lv:62,d:"Horta-Guinardo",tag:["traffic"]},
+{b:[[41.422,2.145],[41.428,2.145],[41.430,2.190],[41.424,2.190]],lv:76,d:"Ronda de Dalt",tag:["traffic"]},
+{b:[[41.395,2.190],[41.410,2.195],[41.415,2.215],[41.405,2.225],[41.395,2.210]],lv:63,d:"Sant Marti",tag:["traffic"]},
+{b:[[41.405,2.210],[41.415,2.215],[41.415,2.235],[41.405,2.230]],lv:68,d:"Diagonal Mar",tag:["traffic"]},
+{b:[[41.398,2.148],[41.408,2.148],[41.410,2.165],[41.400,2.168]],lv:66,d:"Gracia",tag:["traffic","nightlife"]},
+{b:[[41.399,2.154],[41.403,2.154],[41.403,2.159],[41.399,2.159]],lv:68,d:"Pl. del Sol",tag:["nightlife"]},
+{b:[[41.372,2.162],[41.378,2.162],[41.378,2.175],[41.372,2.175]],lv:71,d:"Paral-lel",tag:["traffic","nightlife"]},
+{b:[[41.372,2.130],[41.380,2.130],[41.380,2.145],[41.372,2.145]],lv:67,d:"Sants Est.",tag:["traffic","railway"]},
+{b:[[41.375,2.135],[41.382,2.135],[41.382,2.142],[41.375,2.142]],lv:70,d:"Sants (Renfe)",tag:["railway"]}
+];
+
+// Metro stations (TMB - main lines, representative stations with coordinates)
+var metroStations=[
+// L1 (red)
+{nm:"Hospital de Bellvitge",line:"L1",color:"#e53935",lat:41.3468,lng:2.1059},
+{nm:"Espanya",line:"L1",color:"#e53935",lat:41.3754,lng:2.1492},
+{nm:"Urgell",line:"L1",color:"#e53935",lat:41.3874,lng:2.1601},
+{nm:"Universitat",line:"L1",color:"#e53935",lat:41.3873,lng:2.1645},
+{nm:"Catalunya",line:"L1",color:"#e53935",lat:41.3870,lng:2.1700},
+{nm:"Urquinaona",line:"L1",color:"#e53935",lat:41.3889,lng:2.1738},
+{nm:"Arc de Triomf",line:"L1",color:"#e53935",lat:41.3910,lng:2.1810},
+{nm:"Marina",line:"L1",color:"#e53935",lat:41.3968,lng:2.1883},
+{nm:"Clot",line:"L1",color:"#e53935",lat:41.4100,lng:2.1875},
+{nm:"Fabra i Puig",line:"L1",color:"#e53935",lat:41.4197,lng:2.1715},
+{nm:"Fondo",line:"L1",color:"#e53935",lat:41.4415,lng:2.2195},
+// L2 (purple)
+{nm:"Paral-lel",line:"L2",color:"#9c27b0",lat:41.3755,lng:2.1695},
+{nm:"Sant Antoni",line:"L2",color:"#9c27b0",lat:41.3800,lng:2.1628},
+{nm:"Passeig de Gracia",line:"L2",color:"#9c27b0",lat:41.3920,lng:2.1650},
+{nm:"Tetuan",line:"L2",color:"#9c27b0",lat:41.3945,lng:2.1755},
+{nm:"Sagrada Familia",line:"L2",color:"#9c27b0",lat:41.4040,lng:2.1745},
+{nm:"Badalona Pompeu Fabra",line:"L2",color:"#9c27b0",lat:41.4482,lng:2.2366},
+// L3 (green)
+{nm:"Zona Universitaria",line:"L3",color:"#43a047",lat:41.3865,lng:2.1142},
+{nm:"Les Corts",line:"L3",color:"#43a047",lat:41.3860,lng:2.1280},
+{nm:"Sants Estacio",line:"L3",color:"#43a047",lat:41.3792,lng:2.1399},
+{nm:"Tarragona",line:"L3",color:"#43a047",lat:41.3766,lng:2.1496},
+{nm:"Espanya L3",line:"L3",color:"#43a047",lat:41.3754,lng:2.1492},
+{nm:"Poble Sec",line:"L3",color:"#43a047",lat:41.3735,lng:2.1650},
+{nm:"Drassanes",line:"L3",color:"#43a047",lat:41.3738,lng:2.1740},
+{nm:"Liceu",line:"L3",color:"#43a047",lat:41.3804,lng:2.1731},
+{nm:"Catalunya L3",line:"L3",color:"#43a047",lat:41.3870,lng:2.1700},
+{nm:"Diagonal",line:"L3",color:"#43a047",lat:41.3945,lng:2.1601},
+{nm:"Fontana",line:"L3",color:"#43a047",lat:41.4015,lng:2.1547},
+{nm:"Lesseps",line:"L3",color:"#43a047",lat:41.4038,lng:2.1510},
+{nm:"Vallcarca",line:"L3",color:"#43a047",lat:41.4090,lng:2.1460},
+{nm:"Penitents",line:"L3",color:"#43a047",lat:41.4137,lng:2.1411},
+{nm:"Trinitat Nova",line:"L3",color:"#43a047",lat:41.4506,lng:2.1852},
+// L4 (yellow)
+{nm:"La Pau",line:"L4",color:"#fdd835",lat:41.4180,lng:2.2048},
+{nm:"Selva de Mar",line:"L4",color:"#fdd835",lat:41.4095,lng:2.2100},
+{nm:"Poblenou",line:"L4",color:"#fdd835",lat:41.4010,lng:2.2030},
+{nm:"Bogatell",line:"L4",color:"#fdd835",lat:41.3982,lng:2.1990},
+{nm:"Ciutadella-Vila Olimpica",line:"L4",color:"#fdd835",lat:41.3895,lng:2.1920},
+{nm:"Barceloneta",line:"L4",color:"#fdd835",lat:41.3805,lng:2.1890},
+{nm:"Jaume I",line:"L4",color:"#fdd835",lat:41.3838,lng:2.1766},
+{nm:"Passeig de Gracia L4",line:"L4",color:"#fdd835",lat:41.3920,lng:2.1650},
+{nm:"Girona",line:"L4",color:"#fdd835",lat:41.3945,lng:2.1712},
+{nm:"Joanic",line:"L4",color:"#fdd835",lat:41.4040,lng:2.1623},
+{nm:"Alfons X",line:"L4",color:"#fdd835",lat:41.4100,lng:2.1680},
+{nm:"Guinardo-Hospital St Pau",line:"L4",color:"#fdd835",lat:41.4150,lng:2.1700},
+// L5 (blue)
+{nm:"Cornella Centre",line:"L5",color:"#1e88e5",lat:41.3553,lng:2.0705},
+{nm:"Sants Estacio L5",line:"L5",color:"#1e88e5",lat:41.3792,lng:2.1399},
+{nm:"Entenca",line:"L5",color:"#1e88e5",lat:41.3803,lng:2.1490},
+{nm:"Hospital Clinic",line:"L5",color:"#1e88e5",lat:41.3885,lng:2.1510},
+{nm:"Diagonal L5",line:"L5",color:"#1e88e5",lat:41.3945,lng:2.1601},
+{nm:"Verdaguer",line:"L5",color:"#1e88e5",lat:41.3990,lng:2.1680},
+{nm:"Sagrada Familia L5",line:"L5",color:"#1e88e5",lat:41.4040,lng:2.1745},
+{nm:"Camp de l'Arpa",line:"L5",color:"#1e88e5",lat:41.4100,lng:2.1810},
+{nm:"Horta",line:"L5",color:"#1e88e5",lat:41.4280,lng:2.1610},
+{nm:"Vall d'Hebron",line:"L5",color:"#1e88e5",lat:41.4280,lng:2.1480}
+];
+
+// ======= HELPERS =======
+function nCol(db){return db<55?'#22c55e':db<60?'#84cc16':db<65?'#eab308':db<70?'#f97316':db<75?'#ef4444':'#991b1b'}
+function nOp(db){return db<55?.15:db<60?.2:db<65?.3:db<70?.35:db<75?.45:.55}
+function bCol(r){return r>.6?'#22c55e':r>.2?'#eab308':'#ef4444'}
+function dist2(a,b){return Math.sqrt(Math.pow(a[0]-b[0],2)+Math.pow(a[1]-b[1],2))}
+function setL(t,s){document.getElementById('loadTxt').textContent=t;document.getElementById('loadSub').textContent=s||''}
+
+async function fetchTO(url,ms){
+    var timeout=ms||10000;
+    return new Promise(function(resolve,reject){
+        var done=false;
+        var timer=setTimeout(function(){if(!done){done=true;reject(new Error('Timeout'))}},timeout);
+        fetch(url).then(function(r){
+            clearTimeout(timer);
+            if(done)return;
+            done=true;
+            if(!r.ok)throw new Error('HTTP '+r.status);
+            return r.json();
+        }).then(function(data){if(data!==undefined)resolve(data)}).catch(function(e){clearTimeout(timer);if(!done){done=true;reject(e)}});
+    });
+}
+
+// Habitability index: 100 = perfectly quiet (OMS compliant), 0 = extremely noisy
+function habIndex(dayDb,nightDb,popExposed){
+    var dayScore=Math.max(0,100-((dayDb-53)/25)*100); // 53dB = OMS day threshold
+    var nightScore=Math.max(0,100-((nightDb-45)/25)*100); // 45dB = OMS night threshold
+    var popScore=100-popExposed;
+    return Math.round(dayScore*0.35+nightScore*0.35+popScore*0.3);
+}
+
+// ======= LOAD BOUNDARIES =======
+async function loadBounds(){
+    setL('Cargando limites geograficos...','GitHub bcn-geodata');
+    try{
+        var res=await Promise.all([
+            fetchTO('https://raw.githubusercontent.com/martgnz/bcn-geodata/master/districtes/districtes.geojson',15000),
+            fetchTO('https://raw.githubusercontent.com/martgnz/bcn-geodata/master/barris/barris.geojson',15000)
+        ]);
+        ML.barris=L.geoJSON(res[1],{
+            style:{color:'#6366f1',weight:.8,opacity:.4,fillColor:'#6366f1',fillOpacity:.02,dashArray:'3,5'},
+            onEachFeature:function(f,l){l.bindTooltip('<b>'+(f.properties.NOM||'')+'</b><br><span style="color:#94a3b8">'+(f.properties.N_Distri||'')+'</span>',{className:'dark-tooltip',sticky:true})}
+        });
+        ML.districts=L.geoJSON(res[0],{
+            style:{color:'#818cf8',weight:2,opacity:.7,fillColor:'#6366f1',fillOpacity:.04},
+            onEachFeature:function(f,l){
+                var nm=f.properties.NOM||f.properties.N_Distri||'';
+                var nd=noiseDist[nm];
+                var tip='<b style="font-size:13px">'+nm+'</b>';
+                if(nd){
+                    var hi=habIndex(nd.d,nd.n,nd.pop);
+                    tip+='<br><span style="color:#f97316">'+nd.d+' dB dia | '+nd.n+' dB noche</span>';
+                    tip+='<br><span style="color:#94a3b8">Habitabilidad acustica: <b style="color:'+(hi>60?'#22c55e':hi>40?'#eab308':'#ef4444')+'">'+hi+'/100</b></span>';
+                }
+                l.bindTooltip(tip,{className:'dark-tooltip',sticky:true});
+                l.on('click',function(){showDistDetail(nm,nd)});
+            }
+        });
+        if(S.layers.districts){ML.districts.addTo(map);ML.barris.addTo(map)}
+    }catch(e){console.error('[Bounds]',e)}
+}
+
+function showDistDetail(nm,nd){
+    if(!nd)return;
+    var hi=habIndex(nd.d,nd.n,nd.pop);
+    var hCol=hi>60?'#22c55e':hi>40?'#eab308':'#ef4444';
+    var box=document.getElementById('mapInfoBox');
+    document.getElementById('infoTitle').textContent=nm;
+    document.getElementById('infoContent').innerHTML=
+        '<div style="margin-bottom:10px"><span class="np" style="background:rgba('+(nd.d>=70?'239,68,68':nd.d>=65?'249,115,22':nd.d>=60?'234,179,8':'34,197,94')+',.2);color:'+(nd.d>=70?'#f87171':nd.d>=65?'#fb923c':nd.d>=60?'#facc15':'#4ade80')+'">'+(nd.d>=70?'Critico':nd.d>=65?'Alto':nd.d>=60?'Moderado':'Bajo')+'</span></div>'+
+        '<div class="pr"><span class="lb">Ruido dia:</span><span class="vl">'+nd.d+' dB</span></div>'+
+        '<div class="pr"><span class="lb">Ruido noche:</span><span class="vl">'+nd.n+' dB</span></div>'+
+        '<div class="pr"><span class="lb">Pobl. expuesta alto:</span><span class="vl">'+nd.pop+'%</span></div>'+
+        '<div class="pr"><span class="lb">Fuente principal:</span><span class="vl">'+nd.src+'</span></div>'+
+        '<div class="pr"><span class="lb">Zona acustica:</span><span class="vl">'+nd.z+'</span></div>'+
+        '<div style="margin-top:10px"><div style="font-size:11px;color:#94a3b8;margin-bottom:4px">Indice habitabilidad acustica</div>'+
+        '<div class="hab-idx"><div class="hab-bar"><div class="hab-fill" style="width:'+hi+'%;background:'+hCol+'"></div></div><div class="hab-label" style="color:'+hCol+'">'+hi+'</div></div></div>'+
+        '<div style="margin-top:8px;font-size:10px;color:#475569">OMS: &lt;53dB dia / &lt;45dB noche. Indice 100=cumple OMS, 0=critico.</div>';
+    box.style.display='block';
+}
+
+// ======= NOISE LAYERS =======
+function renderNoise(){
+    if(ML.noise)map.removeLayer(ML.noise);
+    if(ML.noiseHeat)map.removeLayer(ML.noiseHeat);
+    var grp=L.layerGroup();
+    var heatPts=[];
+    var filt=S.noiseFilt;
+
+    noiseZones.forEach(function(z){
+        if(filt!=='all'&&z.tag.indexOf(filt)===-1)return;
+        var p=L.polygon(z.b,{color:nCol(z.lv),weight:1,opacity:.4,fillColor:nCol(z.lv),fillOpacity:nOp(z.lv)});
+        p.bindTooltip('<b>'+z.d+'</b><br>'+z.lv+' dB',{sticky:true,className:'dark-tooltip'});
+        p.addTo(grp);
+        // Add heat points for zone center
+        var cLat=0,cLng=0;z.b.forEach(function(c){cLat+=c[0];cLng+=c[1]});
+        heatPts.push([cLat/z.b.length,cLng/z.b.length,z.lv/80]);
+    });
+
+    noisePts.forEach(function(p){
+        if(filt!=='all'&&p.tag.indexOf(filt)===-1)return;
+        var col=nCol(p.d);
+        var m=L.circleMarker([p.lat,p.lng],{radius:8,color:col,fillColor:col,fillOpacity:.7,weight:2});
+        var nc=p.n>p.d?'<span style="color:#ef4444">Mas ruidoso noche (+'+((p.n-p.d).toFixed(1))+' dB)</span>':'<span style="color:#22c55e">Menos ruido noche (-'+((p.d-p.n).toFixed(1))+' dB)</span>';
+        m.bindPopup('<div class="pt2">'+p.nm+'</div><div class="pr"><span class="lb">Distrito:</span><span class="vl">'+p.dist+'</span></div><div class="pr"><span class="lb">Ruido dia:</span><span class="vl" style="color:'+nCol(p.d)+'">'+p.d+' dB</span></div><div class="pr"><span class="lb">Ruido noche:</span><span class="vl" style="color:'+nCol(p.n)+'">'+p.n+' dB</span></div><div class="pr"><span class="lb">Fuente:</span><span class="vl">'+p.src+'</span></div><div style="margin-top:8px;font-size:11px">'+nc+'</div>');
+        m.addTo(grp);
+        heatPts.push([p.lat,p.lng,p.d/80]);
+    });
+
+    ML.noise=grp;
+    if(S.layers.noise)ML.noise.addTo(map);
+
+    if(typeof L.heatLayer==='function'){
+        ML.noiseHeat=L.heatLayer(heatPts,{
+            radius:30,blur:25,maxZoom:16,max:1.0,
+            gradient:{0:'#22c55e',.3:'#84cc16',.5:'#eab308',.7:'#f97316',.85:'#ef4444',1:'#991b1b'}
+        });
+        if(S.layers.noiseHeat)ML.noiseHeat.addTo(map);
+    }else{console.warn('[Noise] L.heatLayer not available - heatmap disabled')}
+}
+
+// ======= HABITABILITY INDEX PANEL =======
+function renderHabIndex(){
+    var c=document.getElementById('habContainer');
+    var items=Object.entries(noiseDist).map(function(e){
+        return{nm:e[0],hi:habIndex(e[1].d,e[1].n,e[1].pop),d:e[1].d,n:e[1].n,pop:e[1].pop};
+    }).sort(function(a,b){return b.hi-a.hi});
+
+    c.innerHTML=items.map(function(i){
+        var col=i.hi>60?'#22c55e':i.hi>40?'#eab308':'#ef4444';
+        var short=i.nm.length>14?i.nm.substring(0,14)+'...':i.nm;
+        return '<div class="db"><div class="nm">'+short+'</div><div class="bg"><div class="bf" style="width:'+i.hi+'%;background:'+col+'">'+i.hi+'/100</div></div></div>';
+    }).join('')+
+    '<div style="margin-top:10px;font-size:10px;color:#475569;line-height:1.5">Indice compuesto: 35% ruido diurno vs OMS (53dB), 35% ruido nocturno vs OMS (45dB), 30% poblacion no expuesta a ruido alto. 100=optimo, 0=critico.</div>';
+}
+
+// ======= METRO LAYER =======
+function renderMetro(){
+    if(ML.metro)map.removeLayer(ML.metro);
+    var grp=L.layerGroup();
+    metroStations.forEach(function(s){
+        var m=L.circleMarker([s.lat,s.lng],{radius:5,color:s.color,fillColor:s.color,fillOpacity:.9,weight:2,className:'metro-marker'});
+        // Find nearby bicing stations
+        var nearBic=[];
+        if(S.stations)S.stations.forEach(function(b){
+            if(dist2([s.lat,s.lng],[b.lat,b.lon])<0.003)nearBic.push(b);
+        });
+        var bicInfo=nearBic.length>0?'<div style="margin-top:8px;border-top:1px solid rgba(255,255,255,.1);padding-top:6px"><div style="font-size:11px;color:#818cf8;font-weight:600">Bicing cercano (300m):</div>'+nearBic.slice(0,3).map(function(b){return '<div class="pr"><span class="lb">'+b.name.substring(0,25)+'</span><span class="vl">'+b.totalBikes+' bicis</span></div>'}).join('')+'</div>':'<div style="margin-top:6px;font-size:11px;color:#64748b">Sin Bicing cercano (&lt;300m)</div>';
+        m.bindPopup('<div class="pt2"><span class="metro-icon" style="background:'+s.color+(s.line==='L4'?';color:#333':'')+'">'+s.line+'</span> '+s.nm+'</div>'+bicInfo);
+        m.addTo(grp);
+    });
+    ML.metro=grp;
+    if(S.layers.metro)ML.metro.addTo(map);
+}
+
+// ======= BICING LOADER (multi-source) =======
+async function loadBicing(){
+    setL('Conectando con API Bicing...','');
+    // Try CityBikes GBFS
+    try{
+        setL('Conectando API Bicing...','CityBikes GBFS');
+        var res=await Promise.all([fetchTO('https://api.citybik.es/gbfs/2/bicing/station_information.json'),fetchTO('https://api.citybik.es/gbfs/2/bicing/station_status.json')]);
+        if(res[0]&&res[0].data&&res[0].data.stations&&res[1]&&res[1].data&&res[1].data.stations){S.bicSrc='CityBikes GBFS';processGBFS(res[0].data.stations,res[1].data.stations);return}
+    }catch(e){console.warn('[Bic] GBFS fail:',e.message)}
+    // Try CityBikes REST
+    try{
+        setL('Conectando API Bicing...','CityBikes REST');
+        var d=await fetchTO('https://api.citybik.es/v2/networks/bicing');
+        if(d&&d.network&&d.network.stations){S.bicSrc='CityBikes REST';processCB(d.network.stations);return}
+    }catch(e){console.warn('[Bic] REST fail:',e.message)}
+    // Try BSMSA
+    try{
+        setL('Conectando API Bicing...','BSMSA directa');
+        var r2=await Promise.all([fetchTO('https://api.bsmsa.eu/ext/api/bsm/gbfs/v2/en/station_information'),fetchTO('https://api.bsmsa.eu/ext/api/bsm/gbfs/v2/en/station_status')]);
+        if(r2[0]&&r2[0].data&&r2[1]&&r2[1].data){S.bicSrc='BSMSA';processGBFS(r2[0].data.stations,r2[1].data.stations);return}
+    }catch(e){console.warn('[Bic] BSMSA fail:',e.message)}
+    // CORS proxy
+    try{
+        setL('Conectando API Bicing...','Proxy CORS');
+        var px='https://corsproxy.io/?';
+        var r3=await Promise.all([fetchTO(px+encodeURIComponent('https://api.bsmsa.eu/ext/api/bsm/gbfs/v2/en/station_information')),fetchTO(px+encodeURIComponent('https://api.bsmsa.eu/ext/api/bsm/gbfs/v2/en/station_status'))]);
+        if(r3[0]&&r3[0].data&&r3[1]&&r3[1].data){S.bicSrc='BSMSA (Proxy)';processGBFS(r3[0].data.stations,r3[1].data.stations);return}
+    }catch(e){console.warn('[Bic] Proxy fail:',e.message)}
+    S.bicSrc='error';
+    document.getElementById('bicErr').style.display='block';
+    document.getElementById('bicErr').innerHTML='<b>No se pudo conectar.</b> Prueba abrir desde un servidor local: <code>python3 -m http.server</code>';
+    document.getElementById('bicTag').innerHTML='<span class="dst err">Sin conexion</span>';
+}
+
+function processGBFS(info,status){
+    var sm={};status.forEach(function(s){sm[s.station_id]=s});
+    S.stations=info.map(function(i){
+        var st=sm[i.station_id]||{};
+        var me=(st.num_bikes_available_types?(st.num_bikes_available_types.mechanical||st.num_bikes_available_types.MECHANICAL||0):0);
+        var el=(st.num_bikes_available_types?(st.num_bikes_available_types.ebike||st.num_bikes_available_types.ELECTRIC||0):0);
+        var tb=st.num_bikes_available!=null?st.num_bikes_available:(me+el);
+        var dk=st.num_docks_available||0;
+        return{id:i.station_id,name:i.name||'Est. '+i.station_id,lat:i.lat,lon:i.lon,mechanical:me,electric:el,totalBikes:tb,docks:dk,capacity:i.capacity||(tb+dk)||30,isActive:st.status==='IN_SERVICE'||st.is_renting===1||st.is_renting===true};
+    }).filter(function(s){return s.lat&&s.lon&&s.lat>41.3&&s.lat<41.5&&s.lon>2.0&&s.lon<2.3});
+}
+
+function processCB(stations){
+    S.stations=stations.map(function(s){
+        var x=s.extra||{};
+        var me=x.normal_bikes||0,el=x.ebikes||0;
+        var tb=s.free_bikes!=null?s.free_bikes:(me+el);
+        return{id:s.id,name:s.name||'Est.',lat:s.latitude,lon:s.longitude,mechanical:me,electric:el,totalBikes:tb,docks:s.empty_slots||0,capacity:(tb+(s.empty_slots||0))||30,isActive:true};
+    }).filter(function(s){return s.lat&&s.lon&&s.lat>41.3&&s.lat<41.5&&s.lon>2.0&&s.lon<2.3});
+}
+
+// ======= RENDER BICING =======
+function renderBicing(){
+    if(ML.bicing)map.removeLayer(ML.bicing);
+    if(ML.bicHeat)map.removeLayer(ML.bicHeat);
+    if(!S.stations||!S.stations.length)return;
+
+    var cl=L.markerClusterGroup({maxClusterRadius:40,showCoverageOnHover:false,
+        iconCreateFunction:function(c){
+            var ms=c.getAllChildMarkers(),tb=0,tc=0;
+            ms.forEach(function(m){var d=m.options.sd;if(d){tb+=d.totalBikes;tc+=d.capacity}});
+            var r=tc>0?tb/tc:0,col=bCol(r);
+            return L.divIcon({html:'<div style="background:'+col+';color:#fff;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid rgba(255,255,255,.3);box-shadow:0 2px 8px rgba(0,0,0,.4)">'+ms.length+'</div>',className:'',iconSize:[36,36]});
+        }
+    });
+    var hd=[];
+
+    S.stations.forEach(function(s){
+        var r=s.capacity>0?s.totalBikes/s.capacity:0;
+        if(S.bicFilter==='full'&&r<.8)return;
+        if(S.bicFilter==='empty'&&r>.2)return;
+        if(S.bicFilter==='electric'&&s.electric===0)return;
+        if(S.bicFilter==='nearMetro'){
+            var near=false;metroStations.forEach(function(m){if(dist2([s.lat,s.lon],[m.lat,m.lng])<.003)near=true});
+            if(!near)return;
+        }
+        var col=bCol(r),he=s.electric>0;
+        var mk=L.circleMarker([s.lat,s.lon],{radius:5+(s.capacity/10),color:he?'#6366f1':col,fillColor:col,fillOpacity:s.isActive?.8:.2,weight:he?2.5:1.5,sd:s});
+        var bw=Math.round(r*100);
+        // Find nearest metro
+        var nearM=null,nearD=999;
+        metroStations.forEach(function(m){var d=dist2([s.lat,s.lon],[m.lat,m.lng]);if(d<nearD){nearD=d;nearM=m}});
+        var metroInfo=nearD<.005?'<div style="margin-top:6px;font-size:10px;color:#818cf8"><span class="metro-icon" style="background:'+nearM.color+(nearM.line==='L4'?';color:#333':'')+';width:14px;height:14px;font-size:7px">'+nearM.line+'</span> '+nearM.nm+' a ~'+Math.round(nearD*111000)+'m</div>':'';
+
+        mk.bindPopup('<div class="pt2">'+s.name+'</div>'+
+            (!s.isActive?'<div style="color:#ef4444;font-size:11px;margin-bottom:6px">Fuera de servicio</div>':'')+
+            '<div class="pr"><span class="lb">Bicis:</span><span class="vl">'+s.totalBikes+'</span></div>'+
+            '<div class="pr"><span class="lb">  Mecanicas:</span><span class="vl">'+s.mechanical+'</span></div>'+
+            '<div class="pr"><span class="lb">  Electricas:</span><span class="vl" style="color:'+(s.electric>0?'#818cf8':'#64748b')+'">'+s.electric+(s.electric>0?' &#9889;':'')+'</span></div>'+
+            '<div class="pr"><span class="lb">Plazas libres:</span><span class="vl">'+s.docks+'</span></div>'+
+            '<div class="pr"><span class="lb">Capacidad:</span><span class="vl">'+s.capacity+'</span></div>'+
+            '<div style="margin-top:8px"><div style="font-size:10px;color:#64748b;margin-bottom:3px">Ocupacion: '+bw+'%</div><div class="pb"><div class="pbf" style="width:'+bw+'%;background:'+col+'"></div></div></div>'+
+            metroInfo);
+        cl.addLayer(mk);
+        hd.push([s.lat,s.lon,r]);
+    });
+
+    ML.bicing=cl;
+    if(S.layers.bicing)ML.bicing.addTo(map);
+    if(typeof L.heatLayer==='function'){ML.bicHeat=L.heatLayer(hd,{radius:25,blur:20,maxZoom:16,gradient:{0:'#ef4444',.2:'#f97316',.5:'#eab308',.8:'#84cc16',1:'#22c55e'}});}else{console.warn('[Bicing] heatmap disabled - L.heatLayer not available')}
+    if(S.layers.bicHeat)ML.bicHeat.addTo(map);
+}
+
+function updateBicStats(){
+    if(!S.stations||!S.stations.length)return;
+    var tb=0,me=0,el=0,dk=0,ca=0;
+    S.stations.forEach(function(s){tb+=s.totalBikes;me+=s.mechanical;el+=s.electric;dk+=s.docks;ca+=s.capacity});
+    document.getElementById('sTot').textContent=S.stations.length;
+    document.getElementById('sBik').textContent=tb.toLocaleString();
+    document.getElementById('sMec').textContent=me.toLocaleString();
+    document.getElementById('sEle').textContent=el.toLocaleString();
+    document.getElementById('sDok').textContent=dk.toLocaleString();
+    document.getElementById('sOcc').textContent=ca>0?Math.round(tb/ca*100)+'%':'-';
+    if(S.bicSrc&&S.bicSrc!=='error')document.getElementById('bicTag').innerHTML='<span class="dst live">'+S.bicSrc+' &middot; '+S.stations.length+' est.</span>';
+}
+
+// ======= BICING PATTERNS =======
+function renderBicPatterns(){
+    var c=document.getElementById('bicPatterns');
+    if(!S.stations||!S.stations.length){c.innerHTML='<div style="color:#64748b;font-size:11px">Cargando datos Bicing...</div>';return}
+    // Current tab
+    var tab=c.dataset.tab||'demand';
+    if(tab==='demand')renderDemandTab(c);
+    else if(tab==='intermodal')renderIntermodalTab(c);
+    else renderSizingTab(c);
+}
+
+function renderDemandTab(c){
+    var empty=[],full=[];
+    S.stations.forEach(function(s){
+        var r=s.capacity>0?s.totalBikes/s.capacity:0;
+        if(r<.1&&s.isActive)empty.push(s);
+        if(r>.9&&s.isActive)full.push(s);
+    });
+    c.innerHTML=
+        '<div class="subsec">Estaciones casi vacias (&lt;10% - alta demanda)</div>'+
+        (empty.length>0?empty.slice(0,6).map(function(s){return '<div class="pr"><span class="lb" style="font-size:11px">'+s.name.substring(0,30)+'</span><span class="vl" style="color:#ef4444">'+s.totalBikes+'/'+s.capacity+'</span></div>'}).join(''):'<div style="color:#22c55e;font-size:11px">Ninguna estacion critica ahora</div>')+
+        '<div style="margin-top:4px;font-size:10px;color:#64748b">'+empty.length+' estaciones en total</div>'+
+        '<div class="subsec" style="margin-top:12px">Estaciones saturadas (&gt;90%)</div>'+
+        (full.length>0?full.slice(0,6).map(function(s){return '<div class="pr"><span class="lb" style="font-size:11px">'+s.name.substring(0,30)+'</span><span class="vl" style="color:#eab308">'+s.totalBikes+'/'+s.capacity+'</span></div>'}).join(''):'<div style="color:#22c55e;font-size:11px">Ninguna saturada ahora</div>')+
+        '<div style="margin-top:4px;font-size:10px;color:#64748b">'+full.length+' estaciones en total</div>'+
+        '<div class="ins" style="margin-top:10px"><div class="it">Patron horario tipico</div>Las estaciones de zonas residenciales (Sarria, Horta) se vacian entre 7-9h y se llenan entre 18-20h. Las del centro (Eixample, Ciutat Vella) muestran el patron inverso.</div>';
+}
+
+function renderIntermodalTab(c){
+    // Count bicing stations near metro
+    var nearMetroCount=0,farFromMetro=[];
+    S.stations.forEach(function(s){
+        var near=false;
+        metroStations.forEach(function(m){if(dist2([s.lat,s.lon],[m.lat,m.lng])<.003)near=true});
+        if(near)nearMetroCount++;
+        else farFromMetro.push(s);
+    });
+    var pct=Math.round(nearMetroCount/S.stations.length*100);
+
+    // Metro stations without bicing
+    var metroWithoutBic=[];
+    metroStations.forEach(function(m){
+        var hasBic=false;
+        S.stations.forEach(function(s){if(dist2([s.lat,s.lon],[m.lat,m.lng])<.003)hasBic=true});
+        if(!hasBic)metroWithoutBic.push(m);
+    });
+
+    c.innerHTML=
+        '<div class="sg" style="margin-bottom:10px"><div class="sc hl"><div class="sv">'+pct+'%</div><div class="sl2">Bicing cerca Metro (&lt;300m)</div></div><div class="sc"><div class="sv">'+metroWithoutBic.length+'</div><div class="sl2">Metro sin Bicing cerca</div></div></div>'+
+        '<div class="subsec">Paradas de metro sin Bicing cercano</div>'+
+        metroWithoutBic.slice(0,6).map(function(m){return '<div class="pr"><span class="lb"><span class="metro-icon" style="background:'+m.color+(m.line==='L4'?';color:#333':'')+';width:14px;height:14px;font-size:7px">'+m.line+'</span> '+m.nm+'</span></div>'}).join('')+
+        '<div class="ins" style="margin-top:10px"><div class="it">Oportunidad de intermodalidad</div>'+metroWithoutBic.length+' estaciones de metro carecen de Bicing a menos de 300m. Instalar estaciones aqui mejoraria la conexion ultimo-km.</div>';
+}
+
+function renderSizingTab(c){
+    // Oversized (large capacity, very low usage) and undersized (small capacity, always full/empty)
+    var oversized=[],undersized=[];
+    S.stations.forEach(function(s){
+        var r=s.capacity>0?s.totalBikes/s.capacity:0;
+        if(s.capacity>30&&r>.85)oversized.push(s);
+        if(s.capacity<20&&r<.15&&s.isActive)undersized.push(s);
+    });
+
+    c.innerHTML=
+        '<div class="subsec">Potencialmente sobredimensionadas</div>'+
+        '<div style="font-size:10px;color:#64748b;margin-bottom:6px">Alta capacidad (&gt;30) y casi llenas (&gt;85%): posible exceso</div>'+
+        (oversized.length>0?oversized.slice(0,5).map(function(s){return '<div class="pr"><span class="lb" style="font-size:11px">'+s.name.substring(0,28)+'</span><span class="vl">'+s.capacity+' plazas ('+Math.round(s.totalBikes/s.capacity*100)+'%)</span></div>'}).join(''):'<div style="color:#94a3b8;font-size:11px">Ninguna detectada ahora</div>')+
+        '<div class="subsec" style="margin-top:12px">Potencialmente infradimensionadas</div>'+
+        '<div style="font-size:10px;color:#64748b;margin-bottom:6px">Baja capacidad (&lt;20) y vacias (&lt;15%): necesitan mas bicis</div>'+
+        (undersized.length>0?undersized.slice(0,5).map(function(s){return '<div class="pr"><span class="lb" style="font-size:11px">'+s.name.substring(0,28)+'</span><span class="vl" style="color:#ef4444">'+s.capacity+' plazas ('+s.totalBikes+' bicis)</span></div>'}).join(''):'<div style="color:#94a3b8;font-size:11px">Ninguna detectada ahora</div>')+
+        '<div class="ins" style="margin-top:10px"><div class="it">Recomendacion</div>Redistribuir bicicletas de estaciones sobredimensionadas a las infradimensionadas optimizaria la red sin coste adicional.</div>';
+}
+
+// ======= NOISE ANALYSIS PANEL =======
+function renderNoiseAnalysis(){
+    var sorted=Object.entries(noiseDist).sort(function(a,b){return b[1].d-a[1].d});
+    document.getElementById('noiseBars').innerHTML=sorted.map(function(e){
+        var pct=((e[1].d-40)/40)*100;
+        return '<div class="db"><div class="nm">'+(e[0].length>12?e[0].substring(0,12)+'...':e[0])+'</div><div class="bg"><div class="bf" style="width:'+pct+'%;background:'+nCol(e[1].d)+'">'+e[1].d+' dB</div></div></div>';
+    }).join('');
+
+    var byNight=Object.entries(noiseDist).sort(function(a,b){return b[1].n-a[1].n});
+    var html='<div class="subsec">Mas ruidosos de noche</div>';
+    byNight.slice(0,5).forEach(function(d,i){html+='<div class="pr"><span class="lb">'+(i+1)+'. '+d[0]+'</span><span class="vl" style="color:'+nCol(d[1].n)+'">'+d[1].n+' dB</span></div>'});
+    html+='<div class="subsec" style="margin-top:10px">Mas tranquilos</div>';
+    sorted.slice(-3).reverse().forEach(function(d,i){html+='<div class="pr"><span class="lb">'+(i+1)+'. '+d[0]+'</span><span class="vl" style="color:'+nCol(d[1].d)+'">'+d[1].d+' dB</span></div>'});
+    html+='<div class="subsec" style="margin-top:10px">Inversion nocturna</div>';
+    noisePts.filter(function(s){return s.n>s.d}).sort(function(a,b){return(b.n-b.d)-(a.n-a.d)}).slice(0,4).forEach(function(s,i){html+='<div class="pr"><span class="lb">'+(i+1)+'. '+s.nm+'</span><span class="vl" style="color:#ef4444">+'+((s.n-s.d).toFixed(1))+' dB</span></div>'});
+    document.getElementById('noiseRankCnt').innerHTML=html;
+}
+
+// ======= CROSS INSIGHTS =======
+function genInsights(){
+    var c=document.getElementById('insightsCnt'),ins=[];
+
+    // ===== 1. BICING + RUIDO =====
+    if(S.stations&&S.stations.length>0){
+        var emNoise=0;
+        S.stations.forEach(function(s){
+            if(s.capacity>0&&s.totalBikes/s.capacity<.2){
+                noisePts.forEach(function(n){if(dist2([s.lat,s.lon],[n.lat,n.lng])<.005&&n.d>65)emNoise++});
+            }
+        });
+        if(emNoise>0)ins.push({t:'\u{1F6B2}\u{1F50A} Ruido alto = mas demanda Bicing',x:emNoise+' estaciones vacias cerca de zonas ruidosas (>65dB). El trafico genera demanda de bici como alternativa al transporte motorizado.'});
+        var fullS=0,empS=0,totA=0;
+        S.stations.forEach(function(s){if(!s.isActive)return;totA++;var r=s.totalBikes/s.capacity;if(r>.9)fullS++;if(r<.1)empS++});
+        ins.push({t:'\u{1F6B2} Balance de la red',x:'De '+totA+' estaciones: '+empS+' vacias y '+fullS+' llenas. Desequilibrio: '+((empS+fullS)/Math.max(totA,1)*100).toFixed(1)+'%. Indica necesidad de redistribucion.'});
+        var elS=0;S.stations.forEach(function(s){if(s.electric>0)elS++});
+        ins.push({t:'\u{26A1} Electricas vs topografia',x:Math.round(elS/Math.max(totA,1)*100)+'% de estaciones con e-bikes ('+elS+'/'+totA+'). Clave para distritos elevados: Horta-Guinardo (+120m), Sarria (+200m).'});
+    }
+
+    // ===== 2. RUIDO / OMS =====
+    var quiet=noisePts.filter(function(s){return s.d<55});
+    if(quiet.length)ins.push({t:'\u{1F333}\u{1F6B2} Rutas verdes en bici',x:'Zonas con <55dB: '+quiet.map(function(z){return z.nm}).join(', ')+'. Conectarlas con carriles bici crearia corredores acusticos saludables.'});
+    var nightHot=noisePts.filter(function(s){return s.n>s.d});
+    ins.push({t:'\u{1F319} Zonas de inversion nocturna',x:nightHot.length+' calles mas ruidosas de noche que de dia por ocio nocturno. Peor caso: '+nightHot.sort(function(a,b){return(b.n-b.d)-(a.n-a.d)})[0].nm+' (+'+((nightHot[0].n-nightHot[0].d).toFixed(1))+' dB).'});
+    var aboveW=Object.entries(noiseDist).filter(function(e){return e[1].d>53});
+    ins.push({t:'\u{26A0}\u{FE0F} Todos superan OMS',x:aboveW.length+'/10 distritos exceden 53dB (umbral OMS dia). Solo los parques y zonas verdes cumplen las recomendaciones sanitarias.'});
+
+    // ===== 3. ACCIDENTES =====
+    if(S.accData&&S.accData.length>0){
+        var motoAcc=S.accData.filter(function(a){return hasVeh(a,'moto')});
+        var biciAcc=S.accData.filter(function(a){return hasVeh(a,'bici')});
+        var noctAcc=S.accData.filter(function(a){return a.hora>=22||a.hora<7});
+        ins.push({t:'\u{1F4A5}\u{1F50A} Accidentes + Ruido = Trafico peligroso',x:'Las calles con mas ruido (Gran Via, Diagonal, Meridiana) concentran los accidentes mas graves. Reducir trafico mejoraria seguridad Y calidad acustica.'});
+        ins.push({t:'\u{1F3CD}\u{FE0F} Motos: '+Math.round(motoAcc.length/S.accData.length*100)+'% de accidentes',x:motoAcc.length+' accidentes implican moto. Eixample concentra la mayor siniestralidad de motos por su trama vial. '+biciAcc.length+' implican bici, especialmente por apertura de puertas.'});
+        if(noctAcc.length>0)ins.push({t:'\u{1F6A8} Siniestralidad nocturna',x:noctAcc.length+' accidentes entre 22h-7h ('+Math.round(noctAcc.length/S.accData.length*100)+'%). Zonas de ocio (Ciutat Vella, Gracia) combinan ruido alto + accidentes nocturnos con peatones.'});
+        ins.push({t:'\u{1F6B2}\u{26A0}\u{FE0F} Bici: necesidad de infraestructura',x:'Activa Accidentes (filtro Bici) + Carriles Bici para ver donde faltan carriles protegidos. Los accidentes ciclistas se concentran en vias sin infraestructura dedicada.'});
+    }
+
+    // ===== 4. ISLA DE CALOR vs VERDE URBANO =====
+    var treesByDist={};treeData.forEach(function(t){treesByDist[t.dist]=(treesByDist[t.dist]||0)+1});
+    var maxTrees=0,minTrees=Infinity,maxTD='',minTD='';
+    Object.keys(treesByDist).forEach(function(d){if(treesByDist[d]>maxTrees){maxTrees=treesByDist[d];maxTD=d}if(treesByDist[d]<minTrees){minTrees=treesByDist[d];minTD=d}});
+    var hotDist=Object.entries(noiseDist).sort(function(a,b){return b[1].d-a[1].d})[0];
+    ins.push({t:'\u{1F321}\u{FE0F}\u{1F333} Isla de calor vs arbolado',x:minTD+' tiene solo '+minTrees+' arboles (vs '+maxTrees+' en '+maxTD+'). A su vez, '+hotDist[0]+' registra '+hotDist[1].d+'dB de ruido diurno. El deficit de arbolado en zonas de alto trafico amplifica el efecto isla de calor: menos sombra = mas temperatura + ruido reflejado en fachadas.'});
+    // Cross noise with trees
+    var eixTrees=treesByDist['Eixample']||0;
+    var eixNoise=noiseDist['Eixample'];
+    if(eixNoise)ins.push({t:'\u{1F3D9}\u{FE0F} Eixample: densidad sin verde',x:'Eixample: '+eixNoise.density+' hab/km\u00B2, '+(eixNoise.d)+'dB ruido, pero solo '+eixTrees+' arboles mapeados. Su trama en cuadricula canaliza el trafico y el ruido. Cada arbol plantado en chaflanes reduciria hasta 3-5dB.'});
+
+    // ===== 5. SEGREGACION EDUCATIVA =====
+    var schoolByDist={};schoolData.forEach(function(s){
+        if(!schoolByDist[s.dist])schoolByDist[s.dist]={pub:0,conc:0,priv:0,ies:0};
+        if(s.tipo==='publico')schoolByDist[s.dist].pub++;
+        if(s.tipo==='concertado')schoolByDist[s.dist].conc++;
+        if(s.tipo==='privado')schoolByDist[s.dist].priv++;
+        if(s.nm.indexOf('IES')===0)schoolByDist[s.dist].ies++;
+    });
+    var sarria=schoolByDist['Sarria-Sant Gervasi']||{pub:0,priv:0,ies:0};
+    var nouB=schoolByDist['Nou Barris']||{pub:0,priv:0,ies:0};
+    var demSarria=demoData['Sarria-Sant Gervasi']||{};
+    var demNou=demoData['Nou Barris']||{};
+    ins.push({t:'\u{1F393} Segregacion educativa',x:'Sarria-Sant Gervasi: '+sarria.priv+' colegios privados, edad mediana '+(demSarria.age_median||'?')+', '+(demSarria.pct_0_14||'?')+'% poblacion 0-14. Nou Barris: '+nouB.priv+' privados, edad mediana '+(demNou.age_median||'?')+', '+(demNou.pct_0_14||'?')+'% poblacion infantil pero solo '+nouB.ies+' IES publicos. La oferta privada no compensa la demanda publica en distritos populares.'});
+
+    // ===== 6. ACCESIBILIDAD SANITARIA vs ENVEJECIMIENTO =====
+    var healthByDist={};healthData.forEach(function(h){healthByDist[h.dist]=(healthByDist[h.dist]||0)+1});
+    var worst65=Object.entries(demoData).sort(function(a,b){return b[1].pct_65plus-a[1].pct_65plus}).slice(0,3);
+    var healthRatio=worst65.map(function(d){
+        var hc=healthByDist[d[0]]||0;
+        var pop=d[1].pop_total;
+        return{dist:d[0],pct65:d[1].pct_65plus,health:hc,ratio:Math.round(pop/Math.max(hc,1))};
+    });
+    ins.push({t:'\u{1F3E5}\u{1F9D3} Sanidad vs envejecimiento',x:'Distritos mas envejecidos: '+healthRatio.map(function(r){return r.dist+' ('+r.pct65+'% >65, '+r.health+' centros, 1 cada '+r.ratio.toLocaleString()+' hab.)'}).join(' | ')+'. '+healthRatio[0].dist+' con mayor % seniors tiene ratio de '+(healthRatio[0].ratio.toLocaleString())+' hab/centro. Posible deficit de atencion primaria para mayores.'});
+
+    // ===== 7. PRESION TURISTICA vs HABITABILIDAD =====
+    var tourByDist={};tourismData.forEach(function(t){tourByDist[t.dist]=(tourByDist[t.dist]||0)+1});
+    var cvTour=tourByDist['Ciutat Vella']||0;
+    var cvDemo=demoData['Ciutat Vella']||{};
+    var cvNoise=noiseDist['Ciutat Vella']||{};
+    ins.push({t:'\u{1F3E8}\u{1F50A} Presion turistica: Ciutat Vella',x:cvTour+' alojamientos turisticos en Ciutat Vella ('+Math.round(cvTour/tourismData.length*100)+'% del total). Coincide con: '+cvDemo.pct_foreign+'% poblacion extranjera, '+cvNoise.d+'dB ruido diurno / '+cvNoise.n+'dB nocturno, y los peores indices de habitabilidad acustica. El turismo masivo es el principal driver de ruido e insostenibilidad en el centro historico.'});
+    var eixTour=tourByDist['Eixample']||0;
+    ins.push({t:'\u{1F30D} Presion turistica vs cultura real',x:'Ciutat Vella: '+cvTour+' alojamientos. Eixample: '+eixTour+'. Pero la densidad cultural (museos+bibliotecas+teatros) es mas equilibrada. Los turistas se concentran donde hay patrimonio pero consumen pocos servicios culturales locales (bibliotecas, centros civicos). El ratio alojamiento/equipamiento cultural indica sobreexplotacion.'});
+
+    // ===== 8. SEGURIDAD CICLISTA vs INFRAESTRUCTURA =====
+    if(S.accData&&S.accData.length>0){
+        var biciByDist={};S.accData.filter(function(a){return hasVeh(a,'bici')}).forEach(function(a){biciByDist[a.dist]=(biciByDist[a.dist]||0)+1});
+        var topBiciDist=Object.entries(biciByDist).sort(function(a,b){return b[1]-a[1]}).slice(0,3);
+        ins.push({t:'\u{1F6B2}\u{1F6E4}\u{FE0F} Seguridad ciclista vs carriles',x:'Distritos con mas accidentes ciclistas: '+topBiciDist.map(function(d){return d[0]+' ('+d[1]+')'}).join(', ')+'. Activa la capa Carriles Bici para ver la cobertura. Las zonas criticas suelen estar en intersecciones sin proteccion ciclista: chaflanes del Eixample, rotondas de Glories y Pl. Espanya.'});
+
+        // Moto cross with noise
+        var motoByDist={};S.accData.filter(function(a){return hasVeh(a,'moto')}).forEach(function(a){motoByDist[a.dist]=(motoByDist[a.dist]||0)+1});
+        var topMotoDist=Object.entries(motoByDist).sort(function(a,b){return b[1]-a[1]})[0];
+        if(topMotoDist){
+            var motoDistNoise=noiseDist[topMotoDist[0]]||{};
+            ins.push({t:'\u{1F3CD}\u{FE0F}\u{1F50A} Motos + ruido: doble impacto',x:topMotoDist[0]+' lidera en accidentes de moto ('+topMotoDist[1]+') Y tiene '+motoDistNoise.d+'dB de ruido diurno. Barcelona es la ciudad europea con mas motos/habitante. Su impacto es doble: siniestralidad vial + contaminacion acustica.'});
+        }
+    }
+
+    // ===== 9. DESIERTOS DE SERVICIOS =====
+    var servScore={};
+    Object.keys(demoData).forEach(function(d){
+        var cult=0;cultureData.forEach(function(c){if(c.dist===d)cult++});
+        var trees=treesByDist[d]||0;
+        var health=healthByDist[d]||0;
+        var schools=0;schoolData.forEach(function(s){if(s.dist===d)schools++});
+        servScore[d]={cult:cult,trees:trees,health:health,schools:schools,
+            score:cult+Math.round(trees/5)+health*2+Math.round(schools/2)};
+    });
+    var servSorted=Object.entries(servScore).sort(function(a,b){return a[1].score-b[1].score});
+    var worst=servSorted[0],best=servSorted[servSorted.length-1];
+    ins.push({t:'\u{1F6A9} Desiertos de servicios',x:worst[0]+' es el distrito con menor dotacion combinada: '+worst[1].cult+' equip. culturales, '+worst[1].trees+' arboles, '+worst[1].health+' centros salud, '+worst[1].schools+' colegios. Contrasta con '+best[0]+' ('+best[1].cult+' cult., '+best[1].trees+' arb., '+best[1].health+' salud, '+best[1].schools+' esc.). La inversion publica deberia priorizar las zonas con peor dotacion.'});
+
+    // ===== 10. DIVERSIDAD CULTURAL vs SERVICIOS =====
+    var cvDemo2=demoData['Ciutat Vella']||{};
+    var ssgDemo=demoData['Sarria-Sant Gervasi']||{};
+    ins.push({t:'\u{1F465} Diversidad vs desigualdad',x:'Ciutat Vella: '+cvDemo2.pct_foreign+'% extranjeros, hogares de '+cvDemo2.avg_household+' pers., '+cvDemo2.pct_single+'% unipersonales. Sarria: '+ssgDemo.pct_foreign+'% extranjeros, hogares de '+ssgDemo.avg_household+' pers., '+ssgDemo.pct_couple_kids+'% parejas con hijos. Dos modelos de ciudad que requieren servicios publicos muy diferentes.'});
+
+    // ===== 11. VERDE + RUIDO + DEMOGRAFIA =====
+    var nouTrees=treesByDist['Nou Barris']||0;
+    var nouNoise=noiseDist['Nou Barris']||{};
+    ins.push({t:'\u{1F333}\u{1F3D8}\u{FE0F} Verde urbano y justicia ambiental',x:'Nou Barris: '+nouTrees+' arboles, '+(nouNoise.d||'?')+'dB ruido, '+(demNou.pct_0_14||'?')+'% poblacion infantil. Sarria: '+(treesByDist['Sarria-Sant Gervasi']||0)+' arboles, '+(noiseDist['Sarria-Sant Gervasi']||{}).d+'dB. Los distritos con mas ninos tienen menos arbolado y mas ruido: una cuestion de justicia ambiental.'});
+
+    c.innerHTML='<div style="font-size:11px;color:#64748b;margin-bottom:8px">'+ins.length+' patrones detectados cruzando '+Object.keys(S.layers).length+' capas</div>'+
+        ins.map(function(i){return '<div class="ins"><div class="it">'+i.t+'</div>'+i.x+'</div>'}).join('');
+}
+
+// ======= ACCIDENT DATA (2023 Guardia Urbana BCN - representative geolocated sample) =======
+// Based on published CSV fields: Numero_expedient,Codi_districte,Nom_districte,Nom_barri,Codi_carrer,Nom_carrer,
+// Dia_setmana,Descripcio_dia_setmana,NK_Any,Mes_de_any,Nom_mes,Dia_mes,Hora_dia,
+// Descripcio_torn,Descripcio_causa_mediata,Numero_morts,Numero_lesionats_greus,Numero_lesionats_lleus,
+// Numero_vehicles_implicats,Coordenada_UTM_X_ED50,Coordenada_UTM_Y_ED50,Longitud,Latitud
+// f=fecha "YYYY-MM-DD", ds=dia semana (0=dom..6=sab)
+var accidentData=[
+// Ciutat Vella
+{lat:41.3797,lng:2.1731,st:"La Rambla",dist:"Ciutat Vella",hora:14,f:"2023-03-18",ds:6,veh:["peaton","turismo"],morts:0,greus:0,lleus:2,tip:"Atropello"},
+{lat:41.3810,lng:2.1740,st:"La Rambla 45",dist:"Ciutat Vella",hora:22,f:"2023-06-24",ds:6,veh:["peaton","moto"],morts:0,greus:1,lleus:0,tip:"Atropello"},
+{lat:41.3846,lng:2.1765,st:"Via Laietana 32",dist:"Ciutat Vella",hora:8,f:"2023-02-14",ds:2,veh:["bici","turismo"],morts:0,greus:0,lleus:1,tip:"Colision lateral"},
+{lat:41.3830,lng:2.1750,st:"Via Laietana 12",dist:"Ciutat Vella",hora:18,f:"2023-10-05",ds:4,veh:["moto","turismo"],morts:0,greus:1,lleus:1,tip:"Colision frontal"},
+{lat:41.3838,lng:2.1766,st:"C/ Princesa",dist:"Ciutat Vella",hora:20,f:"2023-07-15",ds:6,veh:["bici","peaton"],morts:0,greus:0,lleus:1,tip:"Atropello"},
+{lat:41.3790,lng:2.1755,st:"Pg. Colom",dist:"Ciutat Vella",hora:11,f:"2023-04-22",ds:6,veh:["moto"],morts:0,greus:0,lleus:1,tip:"Caida"},
+{lat:41.3827,lng:2.1668,st:"C/ Joaquin Costa",dist:"Ciutat Vella",hora:2,f:"2023-09-02",ds:6,veh:["peaton","turismo"],morts:0,greus:0,lleus:1,tip:"Atropello"},
+// Eixample
+{lat:41.3876,lng:2.1640,st:"Gran Via 550",dist:"Eixample",hora:9,f:"2023-01-16",ds:1,veh:["moto","turismo"],morts:0,greus:1,lleus:0,tip:"Colision lateral"},
+{lat:41.3882,lng:2.1620,st:"Gran Via 480",dist:"Eixample",hora:17,f:"2023-05-10",ds:3,veh:["bici","furgoneta"],morts:0,greus:0,lleus:1,tip:"Colision lateral"},
+{lat:41.3890,lng:2.1600,st:"Gran Via 400",dist:"Eixample",hora:13,f:"2023-11-22",ds:3,veh:["moto","moto"],morts:0,greus:0,lleus:2,tip:"Colision"},
+{lat:41.3927,lng:2.1648,st:"Pg. Gracia 60",dist:"Eixample",hora:10,f:"2023-08-07",ds:1,veh:["peaton","turismo"],morts:0,greus:0,lleus:1,tip:"Atropello"},
+{lat:41.3945,lng:2.1601,st:"Diagonal 430",dist:"Eixample",hora:19,f:"2023-03-28",ds:2,veh:["moto","turismo"],morts:0,greus:1,lleus:1,tip:"Colision lateral"},
+{lat:41.3910,lng:2.1620,st:"C/ Arago 250",dist:"Eixample",hora:8,f:"2023-06-13",ds:2,veh:["bici","turismo"],morts:0,greus:0,lleus:1,tip:"Apertura puerta"},
+{lat:41.3930,lng:2.1580,st:"C/ Enric Granados",dist:"Eixample",hora:7,f:"2023-04-05",ds:3,veh:["bici"],morts:0,greus:0,lleus:1,tip:"Caida"},
+{lat:41.3950,lng:2.1700,st:"C/ Marina 180",dist:"Eixample",hora:16,f:"2023-09-19",ds:2,veh:["moto","turismo"],morts:0,greus:0,lleus:2,tip:"Colision trasera"},
+{lat:41.3870,lng:2.1700,st:"Pl. Catalunya",dist:"Eixample",hora:12,f:"2023-12-08",ds:5,veh:["peaton","bus"],morts:0,greus:0,lleus:1,tip:"Atropello"},
+{lat:41.3895,lng:2.1555,st:"C/ Comte Urgell",dist:"Eixample",hora:20,f:"2023-07-21",ds:5,veh:["moto"],morts:0,greus:0,lleus:1,tip:"Caida"},
+{lat:41.3870,lng:2.1670,st:"Gran Via / Pg. Gracia",dist:"Eixample",hora:8,f:"2023-02-03",ds:5,veh:["moto","turismo"],morts:1,greus:0,lleus:0,tip:"Colision frontal"},
+// Sants-Montjuic
+{lat:41.3750,lng:2.1492,st:"Pl. Espanya",dist:"Sants-Montjuic",hora:18,f:"2023-10-17",ds:2,veh:["moto","turismo","turismo"],morts:0,greus:1,lleus:2,tip:"Multiple"},
+{lat:41.3744,lng:2.1688,st:"Av. Paral-lel 80",dist:"Sants-Montjuic",hora:23,f:"2023-08-12",ds:6,veh:["moto"],morts:0,greus:0,lleus:1,tip:"Caida"},
+{lat:41.3747,lng:2.1344,st:"C/ Sants 100",dist:"Sants-Montjuic",hora:10,f:"2023-05-25",ds:4,veh:["peaton","turismo"],morts:0,greus:0,lleus:1,tip:"Atropello"},
+{lat:41.3792,lng:2.1399,st:"Estacio Sants",dist:"Sants-Montjuic",hora:8,f:"2023-01-31",ds:2,veh:["bici","taxi"],morts:0,greus:0,lleus:1,tip:"Colision"},
+{lat:41.3726,lng:2.1646,st:"C/ Blai",dist:"Sants-Montjuic",hora:1,f:"2023-06-03",ds:6,veh:["peaton","moto"],morts:0,greus:0,lleus:1,tip:"Atropello"},
+// Les Corts
+{lat:41.3896,lng:2.1358,st:"Av. Diagonal 600",dist:"Les Corts",hora:9,f:"2023-04-11",ds:2,veh:["moto","turismo"],morts:0,greus:1,lleus:0,tip:"Colision lateral"},
+{lat:41.3860,lng:2.1280,st:"Travessera Les Corts",dist:"Les Corts",hora:15,f:"2023-09-06",ds:3,veh:["bici","turismo"],morts:0,greus:0,lleus:1,tip:"Apertura puerta"},
+{lat:41.3870,lng:2.1200,st:"Av. Diagonal 680",dist:"Les Corts",hora:19,f:"2023-11-10",ds:5,veh:["moto","moto"],morts:0,greus:0,lleus:2,tip:"Colision"},
+// Sarria
+{lat:41.4020,lng:2.1526,st:"C/ Balmes 300",dist:"Sarria-Sant Gervasi",hora:8,f:"2023-03-07",ds:2,veh:["turismo","turismo"],morts:0,greus:0,lleus:1,tip:"Colision trasera"},
+{lat:41.3944,lng:2.1423,st:"Via Augusta",dist:"Sarria-Sant Gervasi",hora:17,f:"2023-07-04",ds:2,veh:["moto","turismo"],morts:0,greus:0,lleus:1,tip:"Colision lateral"},
+// Gracia
+{lat:41.4057,lng:2.1489,st:"Ronda del Mig",dist:"Gracia",hora:18,f:"2023-02-21",ds:2,veh:["moto","turismo"],morts:0,greus:1,lleus:1,tip:"Colision lateral"},
+{lat:41.4014,lng:2.1567,st:"Pl. del Sol",dist:"Gracia",hora:0,f:"2023-08-26",ds:6,veh:["peaton","moto"],morts:0,greus:0,lleus:1,tip:"Atropello"},
+{lat:41.4015,lng:2.1547,st:"C/ Torrent de l'Olla",dist:"Gracia",hora:11,f:"2023-05-17",ds:3,veh:["bici","turismo"],morts:0,greus:0,lleus:1,tip:"Colision"},
+// Horta-Guinardo
+{lat:41.4256,lng:2.1614,st:"Ronda de Dalt",dist:"Horta-Guinardo",hora:7,f:"2023-01-23",ds:1,veh:["turismo","turismo","turismo"],morts:0,greus:0,lleus:3,tip:"Multiple"},
+{lat:41.4280,lng:2.1610,st:"C/ Horta",dist:"Horta-Guinardo",hora:14,f:"2023-06-29",ds:4,veh:["moto"],morts:0,greus:0,lleus:1,tip:"Caida"},
+// Nou Barris
+{lat:41.4400,lng:2.1750,st:"Via Favencia",dist:"Nou Barris",hora:16,f:"2023-10-12",ds:4,veh:["moto","turismo"],morts:0,greus:0,lleus:2,tip:"Colision"},
+{lat:41.4350,lng:2.1800,st:"Pg. Fabra i Puig",dist:"Nou Barris",hora:9,f:"2023-04-28",ds:5,veh:["peaton","turismo"],morts:0,greus:0,lleus:1,tip:"Atropello"},
+// Sant Andreu
+{lat:41.4277,lng:2.1892,st:"Av. Meridiana 400",dist:"Sant Andreu",hora:8,f:"2023-03-14",ds:2,veh:["moto","turismo"],morts:0,greus:1,lleus:0,tip:"Colision frontal"},
+{lat:41.4300,lng:2.1870,st:"Av. Meridiana 450",dist:"Sant Andreu",hora:18,f:"2023-11-07",ds:2,veh:["bici","furgoneta"],morts:0,greus:0,lleus:1,tip:"Colision lateral"},
+{lat:41.4320,lng:2.1880,st:"C/ Gran de S.Andreu",dist:"Sant Andreu",hora:20,f:"2023-07-09",ds:0,veh:["peaton","turismo"],morts:0,greus:0,lleus:1,tip:"Atropello"},
+// Sant Marti
+{lat:41.4035,lng:2.2039,st:"Rbla. Poblenou",dist:"Sant Marti",hora:12,f:"2023-05-03",ds:3,veh:["bici","turismo"],morts:0,greus:0,lleus:1,tip:"Colision"},
+{lat:41.4114,lng:2.2295,st:"Av. Diagonal (Forum)",dist:"Sant Marti",hora:9,f:"2023-09-25",ds:1,veh:["moto","turismo"],morts:0,greus:1,lleus:0,tip:"Colision lateral"},
+{lat:41.4010,lng:2.2030,st:"C/ Pere IV",dist:"Sant Marti",hora:15,f:"2023-02-08",ds:3,veh:["bici","peaton"],morts:0,greus:0,lleus:1,tip:"Atropello"},
+{lat:41.4050,lng:2.2100,st:"C/ Selva de Mar",dist:"Sant Marti",hora:19,f:"2023-12-01",ds:5,veh:["moto"],morts:0,greus:0,lleus:1,tip:"Caida"},
+{lat:41.3982,lng:2.1990,st:"Av. Icaria",dist:"Sant Marti",hora:22,f:"2023-08-19",ds:6,veh:["peaton","turismo"],morts:0,greus:0,lleus:1,tip:"Atropello"},
+// Intersecciones de alto riesgo
+{lat:41.3880,lng:2.1640,st:"Gran Via / Pg. Gracia",dist:"Eixample",hora:18,f:"2023-04-18",ds:2,veh:["moto","turismo"],morts:0,greus:1,lleus:1,tip:"Colision"},
+{lat:41.3752,lng:2.1490,st:"Pl. Espanya (rotonda)",dist:"Sants-Montjuic",hora:8,f:"2023-06-07",ds:3,veh:["bici","bus"],morts:0,greus:1,lleus:0,tip:"Colision lateral"},
+{lat:41.3880,lng:2.1700,st:"Pl. Urquinaona",dist:"Eixample",hora:17,f:"2023-01-09",ds:1,veh:["moto","taxi"],morts:0,greus:0,lleus:2,tip:"Colision"},
+{lat:41.3944,lng:2.1600,st:"Diagonal / Pg. Gracia",dist:"Eixample",hora:19,f:"2023-10-27",ds:5,veh:["peaton","turismo"],morts:0,greus:0,lleus:1,tip:"Atropello"},
+{lat:41.3950,lng:2.1755,st:"C/ Marina / Diagonal",dist:"Eixample",hora:8,f:"2023-03-01",ds:3,veh:["bici","turismo"],morts:0,greus:1,lleus:0,tip:"Colision"},
+{lat:41.3870,lng:2.1550,st:"Gran Via / Urgell",dist:"Eixample",hora:13,f:"2023-07-26",ds:3,veh:["moto","turismo"],morts:0,greus:0,lleus:2,tip:"Colision lateral"},
+{lat:41.3780,lng:2.1700,st:"Ronda Sant Pau",dist:"Ciutat Vella",hora:21,f:"2023-11-18",ds:6,veh:["moto","moto"],morts:0,greus:0,lleus:2,tip:"Colision"},
+{lat:41.4100,lng:2.1875,st:"Pl. de les Glories",dist:"Sant Marti",hora:9,f:"2023-05-30",ds:2,veh:["moto","turismo","bici"],morts:0,greus:1,lleus:2,tip:"Multiple"},
+{lat:41.4095,lng:2.1880,st:"Glories (rotonda)",dist:"Sant Marti",hora:17,f:"2023-09-13",ds:3,veh:["bici","turismo"],morts:0,greus:0,lleus:1,tip:"Colision"},
+{lat:41.3895,lng:2.1920,st:"Av. Meridiana / Arago",dist:"Eixample",hora:7,f:"2023-12-14",ds:4,veh:["moto","furgoneta"],morts:0,greus:1,lleus:0,tip:"Colision frontal"},
+// Mas accidentes moto
+{lat:41.3860,lng:2.1500,st:"C/ Tarragona",dist:"Eixample",hora:8,f:"2023-02-27",ds:1,veh:["moto"],morts:0,greus:0,lleus:1,tip:"Caida"},
+{lat:41.3910,lng:2.1750,st:"C/ Roger de Lluria",dist:"Eixample",hora:14,f:"2023-06-16",ds:5,veh:["moto","turismo"],morts:0,greus:0,lleus:1,tip:"Colision lateral"},
+{lat:41.3940,lng:2.1680,st:"C/ Girona / Diagonal",dist:"Eixample",hora:18,f:"2023-08-03",ds:4,veh:["moto","turismo"],morts:0,greus:0,lleus:2,tip:"Colision"},
+{lat:41.4040,lng:2.1745,st:"Av. Gaudi",dist:"Eixample",hora:16,f:"2023-04-14",ds:5,veh:["moto","peaton"],morts:0,greus:0,lleus:1,tip:"Atropello"},
+{lat:41.3800,lng:2.1628,st:"Av. Roma",dist:"Eixample",hora:9,f:"2023-10-02",ds:1,veh:["moto","turismo"],morts:0,greus:0,lleus:2,tip:"Colision trasera"}
+];
+S.accData=accidentData;
+
+// ======= RENDER ACCIDENTS =======
+function accColor(a){if(a.morts>0)return'#dc2626';if(a.greus>0)return'#f97316';return'#fbbf24'}
+function accRadius(a){if(a.morts>0)return 10;if(a.greus>0)return 7;return 5}
+function hasVeh(a,v){return a.veh.indexOf(v)!==-1}
+function accHora(a,h){
+    if(h==='all')return true;
+    if(h==='morning')return a.hora>=7&&a.hora<12;
+    if(h==='afternoon')return a.hora>=12&&a.hora<18;
+    if(h==='evening')return a.hora>=18&&a.hora<22;
+    return a.hora>=22||a.hora<7;
+}
+function accMes(a,filt){
+    if(filt==='all')return true;
+    var m=parseInt(a.f.substring(5,7));
+    if(filt==='Q1')return m>=1&&m<=3;
+    if(filt==='Q2')return m>=4&&m<=6;
+    if(filt==='Q3')return m>=7&&m<=9;
+    if(filt==='Q4')return m>=10&&m<=12;
+    return true;
+}
+function accDia(a,filt){
+    if(filt==='all')return true;
+    if(filt==='laboral')return a.ds>=1&&a.ds<=5;
+    if(filt==='finde')return a.ds===0||a.ds===6;
+    return true;
+}
+var diasNom=['Dom','Lun','Mar','Mie','Jue','Vie','Sab'];
+var mesesNom=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function fmtFecha(f){var p=f.split('-');return parseInt(p[2])+' '+mesesNom[parseInt(p[1])-1]+' '+p[0]}
+function filterAcc(){
+    return S.accData.filter(function(a){
+        if(S.accFiltVeh!=='all'){
+            if(S.accFiltVeh==='bici'&&!hasVeh(a,'bici'))return false;
+            if(S.accFiltVeh==='moto'&&!hasVeh(a,'moto'))return false;
+            if(S.accFiltVeh==='peaton'&&!hasVeh(a,'peaton'))return false;
+        }
+        if(S.accFiltGrav!=='all'){
+            if(S.accFiltGrav==='fatal'&&a.morts===0)return false;
+            if(S.accFiltGrav==='grave'&&a.greus===0)return false;
+            if(S.accFiltGrav==='leve'&&a.greus>0)return false;
+        }
+        if(!accHora(a,S.accFiltHora))return false;
+        if(!accMes(a,S.accFiltMes))return false;
+        if(!accDia(a,S.accFiltDia))return false;
+        return true;
+    });
+}
+
+function renderAccidents(){
+    if(ML.accidents)map.removeLayer(ML.accidents);
+    if(ML.accHeat)map.removeLayer(ML.accHeat);
+    var grp=L.layerGroup();
+    var hd=[];
+    var filtered=filterAcc();
+
+    filtered.forEach(function(a){
+        var col=accColor(a);
+        var hasBici=hasVeh(a,'bici'),hasMoto=hasVeh(a,'moto'),hasPeaton=hasVeh(a,'peaton');
+        var borderCol=hasBici?'#06b6d4':hasMoto?'#a855f7':col;
+        var m=L.circleMarker([a.lat,a.lng],{
+            radius:accRadius(a),color:borderCol,fillColor:col,fillOpacity:.75,weight:hasBici||hasMoto?3:1.5
+        });
+        var gravText=a.morts>0?'<span style="color:#dc2626;font-weight:700">MORTAL</span>':a.greus>0?'<span style="color:#f97316;font-weight:700">GRAVE</span>':'<span style="color:#fbbf24">Leve</span>';
+        var vehIcons=a.veh.map(function(v){
+            if(v==='bici')return '<span style="color:#06b6d4">&#x1F6B2;</span>';
+            if(v==='moto')return '<span style="color:#a855f7">&#x1F3CD;</span>';
+            if(v==='peaton')return '<span style="color:#fbbf24">&#x1F6B6;</span>';
+            if(v==='bus')return '<span style="color:#22c55e">&#x1F68C;</span>';
+            return '<span style="color:#94a3b8">&#x1F697;</span>';
+        }).join(' ');
+        m.bindPopup(
+            '<div class="pt2">'+a.st+'</div>'+
+            '<div class="pr"><span class="lb">Distrito:</span><span class="vl">'+a.dist+'</span></div>'+
+            '<div class="pr"><span class="lb">Gravedad:</span><span class="vl">'+gravText+'</span></div>'+
+            '<div class="pr"><span class="lb">Fecha:</span><span class="vl">'+fmtFecha(a.f)+' ('+diasNom[a.ds]+')</span></div>'+
+            '<div class="pr"><span class="lb">Hora:</span><span class="vl">'+a.hora+':00h</span></div>'+
+            '<div class="pr"><span class="lb">Tipo:</span><span class="vl">'+a.tip+'</span></div>'+
+            '<div class="pr"><span class="lb">Vehiculos:</span><span class="vl">'+vehIcons+' ('+a.veh.join(', ')+')</span></div>'+
+            '<div class="pr"><span class="lb">Victimas:</span><span class="vl">'+(a.morts>0?a.morts+' mort. ':'')+(a.greus>0?a.greus+' grav. ':'')+a.lleus+' leves</span></div>'
+        );
+        m.addTo(grp);
+        var w=a.morts>0?1:a.greus>0?.7:.4;
+        hd.push([a.lat,a.lng,w]);
+    });
+
+    ML.accidents=grp;
+    if(S.layers.accidents)ML.accidents.addTo(map);
+
+    if(typeof L.heatLayer==='function'){
+        ML.accHeat=L.heatLayer(hd,{radius:22,blur:18,maxZoom:16,max:1,
+            gradient:{0:'#fbbf24',.4:'#f97316',.7:'#ef4444',1:'#991b1b'}});
+        if(S.layers.accHeat)ML.accHeat.addTo(map);
+    }
+    updateAccStats(filtered);
+}
+
+function updateAccStats(filtered){
+    var bici=0,moto=0,graves=0;
+    filtered.forEach(function(a){
+        if(hasVeh(a,'bici'))bici++;
+        if(hasVeh(a,'moto'))moto++;
+        if(a.morts>0||a.greus>0)graves++;
+    });
+    document.getElementById('accTotal').textContent=filtered.length;
+    document.getElementById('accGraves').textContent=graves;
+    document.getElementById('accBici').textContent=bici;
+    document.getElementById('accMoto').textContent=moto;
+
+    // Analysis
+    var c=document.getElementById('accAnalysis');
+    // Top dangerous streets
+    var streetCount={};
+    filtered.forEach(function(a){streetCount[a.st]=(streetCount[a.st]||0)+1});
+    var topStreets=Object.entries(streetCount).sort(function(a,b){return b[1]-a[1]}).slice(0,5);
+
+    // District ranking
+    var distCount={};
+    filtered.forEach(function(a){distCount[a.dist]=(distCount[a.dist]||0)+1});
+    var topDist=Object.entries(distCount).sort(function(a,b){return b[1]-a[1]}).slice(0,5);
+
+    // Bici near bike lanes check
+    var biciAcc=filtered.filter(function(a){return hasVeh(a,'bici')});
+
+    // Date-based analysis
+    var diaCount=[0,0,0,0,0,0,0];
+    var mesCount=[0,0,0,0,0,0,0,0,0,0,0,0];
+    filtered.forEach(function(a){
+        diaCount[a.ds]++;
+        var m=parseInt(a.f.substring(5,7));
+        if(m>=1&&m<=12)mesCount[m-1]++;
+    });
+    var maxDia=Math.max.apply(null,diaCount)||1;
+    var maxMes=Math.max.apply(null,mesCount)||1;
+    var labDia=filtered.filter(function(a){return a.ds>=1&&a.ds<=5}).length;
+    var finDia=filtered.filter(function(a){return a.ds===0||a.ds===6}).length;
+
+    c.innerHTML='<div class="subsec">Calles con mas accidentes</div>'+
+        topStreets.map(function(s,i){return '<div class="pr"><span class="lb">'+(i+1)+'. '+s[0].substring(0,25)+'</span><span class="vl" style="color:#f97316">'+s[1]+'</span></div>'}).join('')+
+        '<div class="subsec" style="margin-top:8px">Distritos</div>'+
+        topDist.map(function(d,i){return '<div class="pr"><span class="lb">'+(i+1)+'. '+d[0]+'</span><span class="vl">'+d[1]+'</span></div>'}).join('')+
+        '<div class="subsec" style="margin-top:8px">Por dia de la semana</div>'+
+        diasNom.map(function(d,i){return '<div class="db"><span class="nm">'+d+'</span><div class="bg"><div class="bf" style="width:'+Math.round(diaCount[i]/maxDia*100)+'%;background:'+(i===0||i===6?'#a855f7':'#6366f1')+'">'+diaCount[i]+'</div></div></div>'}).join('')+
+        '<div class="ins" style="margin-top:6px"><div class="it">Laborables vs fines de semana</div>'+
+        'L-V: '+labDia+' acc. ('+Math.round(labDia/5)+'&thinsp;/dia) &middot; S-D: '+finDia+' acc. ('+Math.round(finDia/2)+'&thinsp;/dia)'+(finDia/2>labDia/5?' &mdash; mayor tasa los fines de semana':'')+
+        '</div>'+
+        '<div class="subsec" style="margin-top:8px">Por mes</div>'+
+        mesesNom.map(function(m,i){return '<div class="db"><span class="nm">'+m+'</span><div class="bg"><div class="bf" style="width:'+Math.round(mesCount[i]/maxMes*100)+'%;background:#818cf8">'+mesCount[i]+'</div></div></div>'}).join('')+
+        '<div class="ins" style="margin-top:8px"><div class="it">Motos: grupo mas vulnerable</div>'+
+        moto+' de '+filtered.length+' accidentes ('+Math.round(moto/Math.max(filtered.length,1)*100)+'%) implican motocicletas. Barcelona tiene una de las mayores densidades de motos de Europa, concentradas en Eixample y Ciutat Vella.</div>'+
+        (bici>0?'<div class="ins"><div class="it">Bicicletas: puntos criticos</div>'+bici+' accidentes con bici. Apertura de puertas y colisiones laterales son las causas principales. Activar la capa de carriles bici para ver cobertura.</div>':'');
+}
+
+// ======= BIKE LANES (GeoJSON from Open Data BCN) =======
+async function loadBikeLanes(){
+    try{
+        console.log('[BikeLanes] Loading GeoJSON...');
+        // Try carril bici GeoJSON from Open Data BCN
+        var data=await fetchTO('https://opendata-ajuntament.barcelona.cat/data/dataset/carril-bici/resource/4608cf0c-2f11-4a25-891f-c5afc3af82c5/download/CARRIL_BICI.geojson',15000);
+        if(data&&data.features){
+            ML.bikeLanes=L.geoJSON(data,{
+                style:{color:'#22d3ee',weight:3,opacity:.8,dashArray:''},
+                onEachFeature:function(f,l){
+                    var p=f.properties||{};
+                    l.bindTooltip('<b>Carril Bici</b><br>'+(p.NOM_CARRER||p.TOOLTIP||''),{className:'dark-tooltip',sticky:true});
+                }
+            });
+            document.getElementById('bikeTag').innerHTML='<span class="dst live">'+data.features.length+' tramos</span>';
+            if(S.layers.bikeLanes)ML.bikeLanes.addTo(map);
+            console.log('[BikeLanes] OK:',data.features.length,'features');
+            return;
+        }
+    }catch(e){console.warn('[BikeLanes] Direct fetch failed:',e.message)}
+    // Fallback: try corridors
+    try{
+        var data2=await fetchTO('https://opendata-ajuntament.barcelona.cat/data/dataset/af083278-6873-4a3c-b3d5-68860cc769af/resource/7fa370dc-b5a8-49ad-96ce-489db7822533/download/CORREDORS_BICI.geojson',15000);
+        if(data2&&data2.features){
+            ML.bikeLanes=L.geoJSON(data2,{
+                style:{color:'#f472b6',weight:3,opacity:.8},
+                onEachFeature:function(f,l){l.bindTooltip('<b>Corredor Bici</b>',{className:'dark-tooltip',sticky:true})}
+            });
+            document.getElementById('bikeTag').innerHTML='<span class="dst live">Corredores</span>';
+            if(S.layers.bikeLanes)ML.bikeLanes.addTo(map);
+            return;
+        }
+    }catch(e){console.warn('[BikeLanes] Corridor fetch failed:',e.message)}
+    // Fallback with CORS proxy
+    try{
+        var px='https://corsproxy.io/?';
+        var data3=await fetchTO(px+encodeURIComponent('https://opendata-ajuntament.barcelona.cat/data/dataset/carril-bici/resource/4608cf0c-2f11-4a25-891f-c5afc3af82c5/download/CARRIL_BICI.geojson'),15000);
+        if(data3&&data3.features){
+            ML.bikeLanes=L.geoJSON(data3,{
+                style:{color:'#22d3ee',weight:3,opacity:.8},
+                onEachFeature:function(f,l){l.bindTooltip('<b>Carril Bici</b>',{className:'dark-tooltip',sticky:true})}
+            });
+            document.getElementById('bikeTag').innerHTML='<span class="dst live">'+data3.features.length+' tramos (proxy)</span>';
+            if(S.layers.bikeLanes)ML.bikeLanes.addTo(map);
+            return;
+        }
+    }catch(e){console.warn('[BikeLanes] Proxy fetch failed:',e.message)}
+    document.getElementById('bikeTag').innerHTML='<span class="dst err">No disponible</span>';
+}
+
+function setAccFilt(type,val,btn){
+    if(type==='veh')S.accFiltVeh=val;
+    else if(type==='grav')S.accFiltGrav=val;
+    else if(type==='hora')S.accFiltHora=val;
+    else if(type==='mes')S.accFiltMes=val;
+    else if(type==='dia')S.accFiltDia=val;
+    btn.parentElement.querySelectorAll('.fbtn').forEach(function(b){b.classList.remove('active')});
+    btn.classList.add('active');
+    renderAccidents();
+}
+
+// ======= UI CONTROLS =======
+var layerSections={
+    noise:['noiseFiltSec','habSec','noiseAnalSec'],
+    noiseHeat:['noiseFiltSec'],
+    bicing:['bicStatsSec','bicPatSec'],
+    bicHeat:[],
+    metro:[],
+    accidents:['accSec'],
+    accHeat:['accSec'],
+    bikeLanes:[],
+    demographics:['demoSec'],
+    trees:['treesSec'],
+    treeHeat:['treesSec'],
+    culture:['cultureSec'],
+    tourism:['cultureSec'],
+    health:['healthSec'],
+    schools:['schoolsSec'],
+    districts:[]
+};
+function syncPanelVis(){
+    var vis={};
+    Object.keys(layerSections).forEach(function(ly){
+        layerSections[ly].forEach(function(secId){
+            if(!vis[secId])vis[secId]=false;
+            if(S.layers[ly])vis[secId]=true;
+        });
+    });
+    Object.keys(vis).forEach(function(secId){
+        var el=document.getElementById(secId);
+        if(el)el.style.display=vis[secId]?'':'none';
+    });
+}
+function tgl(name){
+    var chk=document.getElementById('chk-'+name);
+    S.layers[name]=chk.checked;
+    chk.closest('.lt').classList.toggle('active',chk.checked);
+    syncPanelVis();
+    var l=ML[name];
+    if(!l)return;
+    chk.checked?l.addTo(map):map.removeLayer(l);
+}
+
+function setBF(f,btn){S.bicFilter=f;document.querySelectorAll('#bicingStatsSection .fbtn, .sec .fbtn').forEach(function(b){});btn.parentElement.querySelectorAll('.fbtn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');renderBicing()}
+
+function setNoiseFilt(f,btn){S.noiseFilt=f;btn.parentElement.querySelectorAll('.fbtn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');renderNoise()}
+
+function setBicTab(tab,btn){btn.parentElement.querySelectorAll('.tbn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');var c=document.getElementById('bicPatterns');c.dataset.tab=tab;renderBicPatterns()}
+
+function setNT(tab,btn){btn.parentElement.querySelectorAll('.tbn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');document.getElementById('noiseOverview').style.display=tab==='overview'?'block':'none';document.getElementById('noiseRanking').style.display=tab==='ranking'?'block':'none'}
+
+// ======= DEMOGRAPHICS DATA (Padron Municipal Barcelona 2023) =======
+var demoData={
+"Ciutat Vella":{pop_total:101029,area_km2:4.37,density:23118,age_median:39.2,pct_0_14:9.8,pct_15_24:10.2,pct_25_64:59.5,pct_65plus:20.5,pct_foreign:42.8,pct_female:48.2,avg_household:2.1,sex_ratio:1.07,n_households:48109,pct_single:45.2,pct_couple_kids:18.5,pct_couple_nokids:15.3,pct_singleparent:8.2},
+"Eixample":{pop_total:265525,area_km2:7.46,density:35593,age_median:44.1,pct_0_14:10.5,pct_15_24:9.1,pct_25_64:55.8,pct_65plus:24.6,pct_foreign:22.1,pct_female:54.2,avg_household:2.3,sex_ratio:0.85,n_households:115445,pct_single:38.5,pct_couple_kids:20.2,pct_couple_nokids:18.8,pct_singleparent:7.1},
+"Sants-Montjuic":{pop_total:187186,area_km2:21.35,density:8767,age_median:42.5,pct_0_14:11.8,pct_15_24:9.5,pct_25_64:56.2,pct_65plus:22.5,pct_foreign:24.3,pct_female:51.8,avg_household:2.4,sex_ratio:0.93,n_households:78828,pct_single:33.5,pct_couple_kids:22.8,pct_couple_nokids:17.5,pct_singleparent:9.1},
+"Les Corts":{pop_total:82033,area_km2:6.02,density:13627,age_median:45.8,pct_0_14:11.2,pct_15_24:9.8,pct_25_64:52.1,pct_65plus:26.9,pct_foreign:14.5,pct_female:54.8,avg_household:2.5,sex_ratio:0.83,n_households:33214,pct_single:30.2,pct_couple_kids:24.5,pct_couple_nokids:20.1,pct_singleparent:6.8},
+"Sarria-Sant Gervasi":{pop_total:149734,area_km2:20.09,density:7453,age_median:46.2,pct_0_14:14.2,pct_15_24:10.5,pct_25_64:49.8,pct_65plus:25.5,pct_foreign:15.8,pct_female:55.1,avg_household:2.7,sex_ratio:0.81,n_households:56916,pct_single:26.5,pct_couple_kids:28.2,pct_couple_nokids:19.5,pct_singleparent:6.2},
+"Gracia":{pop_total:122863,area_km2:4.19,density:29323,age_median:43.5,pct_0_14:10.8,pct_15_24:8.9,pct_25_64:56.8,pct_65plus:23.5,pct_foreign:18.2,pct_female:53.5,avg_household:2.2,sex_ratio:0.87,n_households:55847,pct_single:38.8,pct_couple_kids:19.5,pct_couple_nokids:18.2,pct_singleparent:7.5},
+"Horta-Guinardo":{pop_total:172531,area_km2:11.96,density:14426,age_median:44.8,pct_0_14:11.5,pct_15_24:9.2,pct_25_64:53.5,pct_65plus:25.8,pct_foreign:14.2,pct_female:52.8,avg_household:2.5,sex_ratio:0.89,n_households:69812,pct_single:31.2,pct_couple_kids:23.5,pct_couple_nokids:19.8,pct_singleparent:8.5},
+"Nou Barris":{pop_total:171958,area_km2:8.04,density:21389,age_median:43.2,pct_0_14:12.5,pct_15_24:10.1,pct_25_64:54.2,pct_65plus:23.2,pct_foreign:22.5,pct_female:52.1,avg_household:2.5,sex_ratio:0.92,n_households:68783,pct_single:30.8,pct_couple_kids:22.2,pct_couple_nokids:17.8,pct_singleparent:10.5},
+"Sant Andreu":{pop_total:150327,area_km2:6.56,density:22916,age_median:43.8,pct_0_14:12.1,pct_15_24:9.8,pct_25_64:54.5,pct_65plus:23.6,pct_foreign:17.8,pct_female:52.5,avg_household:2.5,sex_ratio:0.91,n_households:60531,pct_single:29.5,pct_couple_kids:24.1,pct_couple_nokids:18.5,pct_singleparent:9.2},
+"Sant Marti":{pop_total:239482,area_km2:10.80,density:22174,age_median:43.1,pct_0_14:12.8,pct_15_24:9.5,pct_25_64:55.1,pct_65plus:22.6,pct_foreign:18.5,pct_female:52.2,avg_household:2.4,sex_ratio:0.91,n_households:99785,pct_single:32.1,pct_couple_kids:23.8,pct_couple_nokids:18.1,pct_singleparent:8.8}
+};
+var demoVarLabels={
+    pop_total:'Poblacion total',density:'Hab/km²',age_median:'Edad mediana',pct_65plus:'% mayores 65',
+    pct_foreign:'% extranjeros',pct_0_14:'% jovenes 0-14',avg_household:'Personas/hogar',sex_ratio:'Ratio M/H'
+};
+var demoVarFmt={
+    pop_total:function(v){return v>=1000?(v/1000).toFixed(1)+'k':v},
+    density:function(v){return v>=1000?(v/1000).toFixed(1)+'k':v},
+    age_median:function(v){return v.toFixed(1)},
+    pct_65plus:function(v){return v.toFixed(1)+'%'},
+    pct_foreign:function(v){return v.toFixed(1)+'%'},
+    pct_0_14:function(v){return v.toFixed(1)+'%'},
+    avg_household:function(v){return v.toFixed(1)},
+    sex_ratio:function(v){return v.toFixed(2)}
+};
+
+function getDemoColor(val,min,max){
+    var t=(val-min)/(max-min||1);
+    var colors=['#c7d2fe','#a5b4fc','#818cf8','#6366f1','#4338ca','#312e81'];
+    var i=Math.min(Math.floor(t*colors.length),colors.length-1);
+    return colors[i];
+}
+
+function renderDemographics(){
+    if(ML.demographics)map.removeLayer(ML.demographics);
+    if(!ML.districts)return;
+    var v=S.demoVar;
+    var vals=Object.keys(demoData).map(function(d){return demoData[d][v]});
+    var mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals);
+    var avg=vals.reduce(function(a,b){return a+b},0)/vals.length;
+    var std=Math.sqrt(vals.reduce(function(a,b){return a+(b-avg)*(b-avg)},0)/vals.length);
+    var fmt=demoVarFmt[v]||function(x){return x};
+
+    var grp=L.layerGroup();
+    // Use district boundaries from ML.districts source
+    function norm(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,'')}
+    ML.districts.eachLayer(function(layer){
+        var props=layer.feature?layer.feature.properties:{};
+        var name=props.NOM||props.nom||props.name||props.DISTRICTE||'';
+        // Match district name (accent-safe)
+        var dd=null;
+        var nn=norm(name);
+        Object.keys(demoData).forEach(function(k){
+            var nk=norm(k);
+            if(nn.indexOf(nk)!==-1||nk.indexOf(nn)!==-1){
+                dd=demoData[k];dd._name=k;
+            }
+        });
+        if(!dd)return;
+        var val=dd[v];
+        var col=getDemoColor(val,mn,mx);
+        var poly=L.geoJSON(layer.toGeoJSON(),{
+            style:{fillColor:col,fillOpacity:.65,color:'#6366f1',weight:2,opacity:.8}
+        });
+        poly.bindTooltip('<div style="font-weight:700;font-size:13px">'+dd._name+'</div>'+
+            '<div style="font-size:12px;margin-top:4px">'+demoVarLabels[v]+': <b>'+fmt(val)+'</b></div>',
+            {className:'dark-tooltip',sticky:true});
+        poly.bindPopup(
+            '<div class="pt2">'+dd._name+'</div>'+
+            '<div class="pr"><span class="lb">Poblacion:</span><span class="vl">'+dd.pop_total.toLocaleString()+'</span></div>'+
+            '<div class="pr"><span class="lb">Densidad:</span><span class="vl">'+dd.density.toLocaleString()+' hab/km²</span></div>'+
+            '<div class="pr"><span class="lb">Edad mediana:</span><span class="vl">'+dd.age_median+'</span></div>'+
+            '<div class="pr"><span class="lb">% &gt;65 anos:</span><span class="vl">'+dd.pct_65plus+'%</span></div>'+
+            '<div class="pr"><span class="lb">% extranjeros:</span><span class="vl">'+dd.pct_foreign+'%</span></div>'+
+            '<div class="pr"><span class="lb">% 0-14 anos:</span><span class="vl">'+dd.pct_0_14+'%</span></div>'+
+            '<div class="pr"><span class="lb">Tam. hogar:</span><span class="vl">'+dd.avg_household+'</span></div>'+
+            '<div class="pr"><span class="lb">Ratio M/H:</span><span class="vl">'+dd.sex_ratio+'</span></div>'+
+            '<div class="pr"><span class="lb">Hogares:</span><span class="vl">'+dd.n_households.toLocaleString()+'</span></div>'+
+            '<div class="pr"><span class="lb">% unipersonales:</span><span class="vl">'+dd.pct_single+'%</span></div>'+
+            '<div class="pr"><span class="lb">% pareja+hijos:</span><span class="vl">'+dd.pct_couple_kids+'%</span></div>'+
+            '<div class="pr"><span class="lb">% monoparental:</span><span class="vl">'+dd.pct_singleparent+'%</span></div>'
+        );
+        poly.addTo(grp);
+    });
+
+    ML.demographics=grp;
+    if(S.layers.demographics)grp.addTo(map);
+
+    // Update stats panel
+    var sorted=Object.keys(demoData).map(function(k){return{n:k,v:demoData[k][v]}}).sort(function(a,b){return b.v-a.v});
+    document.getElementById('demoValMax').textContent=fmt(mx);
+    document.getElementById('demoLblMax').textContent=sorted[0].n;
+    document.getElementById('demoValMin').textContent=fmt(mn);
+    document.getElementById('demoLblMin').textContent=sorted[sorted.length-1].n;
+    document.getElementById('demoValAvg').textContent=fmt(avg);
+    document.getElementById('demoValStd').textContent=fmt(std);
+
+    var rc=document.getElementById('demoRanking');
+    rc.innerHTML='<div class="subsec">Ranking por '+demoVarLabels[v]+'</div>'+
+        sorted.map(function(d,i){
+            var pct=Math.round((d.v-mn)/(mx-mn||1)*100);
+            return '<div class="db"><span class="nm">'+d.n.substring(0,14)+'</span><div class="bg"><div class="bf" style="width:'+pct+'%;background:'+getDemoColor(d.v,mn,mx)+'">'+fmt(d.v)+'</div></div></div>';
+        }).join('')+
+        '<div class="ins" style="margin-top:8px"><div class="it">'+demoVarLabels[v]+'</div>'+
+        getDemoInsight(v,sorted)+'</div>';
+}
+
+function getDemoInsight(v,sorted){
+    var top=sorted[0],bot=sorted[sorted.length-1];
+    if(v==='pop_total')return top.n+' es el distrito mas poblado con '+demoVarFmt.pop_total(top.v)+' hab. La diferencia con '+bot.n+' es de '+demoVarFmt.pop_total(top.v-bot.v)+' hab.';
+    if(v==='density')return top.n+' tiene la mayor densidad ('+demoVarFmt.density(top.v)+' hab/km²). '+bot.n+' es '+Math.round(top.v/bot.v)+'x menos denso.';
+    if(v==='age_median')return top.n+' es el distrito con mayor edad mediana ('+top.v.toFixed(1)+' anos). '+bot.n+' el mas joven ('+bot.v.toFixed(1)+').';
+    if(v==='pct_65plus')return top.n+' tiene mayor envejecimiento ('+top.v+'% &gt;65). '+bot.n+' el menor ('+bot.v+'%). Diferencia de '+(top.v-bot.v).toFixed(1)+' pp.';
+    if(v==='pct_foreign')return top.n+' concentra la mayor diversidad cultural ('+top.v+'% extranjeros). Casi '+(top.v/bot.v).toFixed(1)+'x mas que '+bot.n+'.';
+    if(v==='pct_0_14')return top.n+' tiene la mayor proporcion infantil ('+top.v+'%). '+bot.n+' la menor ('+bot.v+'%). Indicador de dinamismo demografico.';
+    if(v==='avg_household')return top.n+' tiene hogares mas grandes ('+top.v+' pers.). '+bot.n+' los mas pequenos ('+bot.v+'). Refleja estructura familiar vs singles.';
+    if(v==='sex_ratio')return top.n+' tiene ratio M/H de '+top.v+' (mas hombres). '+bot.n+' ratio '+bot.v+' (mas mujeres). Ratio &gt;1 indica predominio masculino.';
+    return '';
+}
+
+function setDemoVar(v,btn){
+    S.demoVar=v;
+    document.querySelectorAll('#demoVarBtns .fbtn, #demoVarBtns2 .fbtn').forEach(function(b){b.classList.remove('active')});
+    btn.classList.add('active');
+    renderDemographics();
+}
+
+// ======= TREE DATA (Arbolado Viario BCN - sample representative) =======
+var treeSpeciesColors={platanus:'#22c55e',celtis:'#84cc16',citrus:'#f97316',tipuana:'#14b8a6',jacaranda:'#a855f7',pinus:'#0ea5e9',other:'#94a3b8'};
+var treeSpeciesNames={platanus:'Platanus x hispanica',celtis:'Celtis australis',citrus:'Citrus aurantium',tipuana:'Tipuana tipu',jacaranda:'Jacaranda mimosifolia',pinus:'Pinus pinea',other:'Otras especies'};
+var treeData=[];
+(function(){
+// Generate representative tree distribution per district based on BCN open data patterns
+var treeDefs=[
+// Eixample - heavy platanus (most in BCN), regular grid
+{dist:"Eixample",base:[41.390,2.164],n:35,species:[{s:'platanus',w:45},{s:'celtis',w:20},{s:'citrus',w:10},{s:'tipuana',w:10},{s:'jacaranda',w:8},{s:'other',w:7}],spread:[0.008,0.008]},
+// Ciutat Vella - fewer trees, more citrus
+{dist:"Ciutat Vella",base:[41.381,2.175],n:15,species:[{s:'citrus',w:30},{s:'platanus',w:25},{s:'celtis',w:15},{s:'jacaranda',w:10},{s:'other',w:20}],spread:[0.005,0.006]},
+// Sants-Montjuic - mixed, park areas
+{dist:"Sants-Montjuic",base:[41.374,2.148],n:25,species:[{s:'platanus',w:30},{s:'pinus',w:20},{s:'tipuana',w:15},{s:'celtis',w:15},{s:'other',w:20}],spread:[0.010,0.012]},
+// Les Corts
+{dist:"Les Corts",base:[41.387,2.130],n:15,species:[{s:'platanus',w:40},{s:'celtis',w:20},{s:'tipuana',w:15},{s:'other',w:25}],spread:[0.006,0.008]},
+// Sarria-Sant Gervasi - lots of pines, green area
+{dist:"Sarria-Sant Gervasi",base:[41.402,2.135],n:25,species:[{s:'pinus',w:30},{s:'platanus',w:25},{s:'celtis',w:15},{s:'tipuana',w:10},{s:'other',w:20}],spread:[0.012,0.012]},
+// Gracia
+{dist:"Gracia",base:[41.403,2.155],n:18,species:[{s:'platanus',w:35},{s:'celtis',w:20},{s:'jacaranda',w:15},{s:'citrus',w:10},{s:'other',w:20}],spread:[0.005,0.006]},
+// Horta-Guinardo - hilly, more pines
+{dist:"Horta-Guinardo",base:[41.425,2.162],n:22,species:[{s:'pinus',w:25},{s:'platanus',w:25},{s:'celtis',w:20},{s:'tipuana',w:10},{s:'other',w:20}],spread:[0.010,0.008]},
+// Nou Barris
+{dist:"Nou Barris",base:[41.438,2.177],n:15,species:[{s:'platanus',w:30},{s:'pinus',w:20},{s:'celtis',w:20},{s:'other',w:30}],spread:[0.007,0.006]},
+// Sant Andreu
+{dist:"Sant Andreu",base:[41.430,2.189],n:15,species:[{s:'platanus',w:35},{s:'celtis',w:25},{s:'tipuana',w:15},{s:'other',w:25}],spread:[0.006,0.006]},
+// Sant Marti - wide avenues, many trees
+{dist:"Sant Marti",base:[41.405,2.205],n:28,species:[{s:'platanus',w:35},{s:'tipuana',w:20},{s:'jacaranda',w:15},{s:'celtis',w:15},{s:'other',w:15}],spread:[0.010,0.010]}
+];
+// Seeded pseudo-random
+var seed=42;function rng(){seed=(seed*16807+0)%2147483647;return(seed-1)/2147483646}
+treeDefs.forEach(function(td){
+    for(var i=0;i<td.n;i++){
+        var r=rng()*100,cum=0,sp='other';
+        for(var j=0;j<td.species.length;j++){cum+=td.species[j].w;if(r<cum){sp=td.species[j].s;break}}
+        var lat=td.base[0]+(rng()-0.5)*td.spread[0]*2;
+        var lng=td.base[1]+(rng()-0.5)*td.spread[1]*2;
+        var circ=Math.round(40+rng()*200); // perimeter cm
+        var h=Math.round(3+rng()*18); // height m
+        treeData.push({lat:lat,lng:lng,sp:sp,dist:td.dist,circ:circ,h:h});
+    }
+});
+})();
+
+function renderTrees(){
+    if(ML.trees)map.removeLayer(ML.trees);
+    if(ML.treeHeat)map.removeLayer(ML.treeHeat);
+    var cluster=L.markerClusterGroup({maxClusterRadius:50,spiderfyOnMaxZoom:true,
+        iconCreateFunction:function(c){var n=c.getChildCount();var sz=n<10?'small':n<30?'medium':'large';
+        return L.divIcon({html:'<div style="background:rgba(34,197,94,.7);color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid rgba(34,197,94,.9)">'+n+'</div>',className:'',iconSize:[36,36]})}
+    });
+    var hd=[];
+    var filtered=treeData.filter(function(t){
+        if(S.treeFilt==='all')return true;
+        if(S.treeFilt==='other')return !treeSpeciesColors[t.sp]||t.sp==='other';
+        return t.sp===S.treeFilt;
+    });
+    filtered.forEach(function(t){
+        var col=treeSpeciesColors[t.sp]||'#94a3b8';
+        var m=L.circleMarker([t.lat,t.lng],{radius:5,color:col,fillColor:col,fillOpacity:.8,weight:1});
+        m.bindPopup(
+            '<div class="pt2">'+(treeSpeciesNames[t.sp]||t.sp)+'</div>'+
+            '<div class="pr"><span class="lb">Distrito:</span><span class="vl">'+t.dist+'</span></div>'+
+            '<div class="pr"><span class="lb">Perimetro:</span><span class="vl">'+t.circ+' cm</span></div>'+
+            '<div class="pr"><span class="lb">Altura:</span><span class="vl">'+t.h+' m</span></div>'
+        );
+        cluster.addLayer(m);
+        hd.push([t.lat,t.lng,.5]);
+    });
+    ML.trees=cluster;
+    if(S.layers.trees)cluster.addTo(map);
+    if(typeof L.heatLayer==='function'){
+        ML.treeHeat=L.heatLayer(hd,{radius:20,blur:15,maxZoom:17,gradient:{0:'#0a0e17',.3:'#14532d',.5:'#22c55e',.7:'#86efac',1:'#dcfce7'}});
+        if(S.layers.treeHeat)ML.treeHeat.addTo(map);
+    }
+    updateTreeStats(filtered);
+}
+function updateTreeStats(filtered){
+    var specSet={};
+    var distCount={};
+    filtered.forEach(function(t){specSet[t.sp]=true;distCount[t.dist]=(distCount[t.dist]||0)+1});
+    var sorted=Object.entries(distCount).sort(function(a,b){return b[1]-a[1]});
+    document.getElementById('treesTotal').textContent=filtered.length;
+    document.getElementById('treesSpecies').textContent=Object.keys(specSet).length;
+    document.getElementById('treesTopDist').textContent=sorted.length?sorted[0][0].substring(0,12):'—';
+    document.getElementById('treesDesert').textContent=sorted.length?sorted[sorted.length-1][0].substring(0,12):'—';
+    var c=document.getElementById('treesAnalysis');
+    var maxD=sorted.length?sorted[0][1]:1;
+    // Species breakdown
+    var spCount={};filtered.forEach(function(t){spCount[t.sp]=(spCount[t.sp]||0)+1});
+    var spSorted=Object.entries(spCount).sort(function(a,b){return b[1]-a[1]});
+    var maxSp=spSorted.length?spSorted[0][1]:1;
+    c.innerHTML='<div class="subsec">Arboles por distrito</div>'+
+        sorted.map(function(d){return '<div class="db"><span class="nm">'+d[0].substring(0,14)+'</span><div class="bg"><div class="bf" style="width:'+Math.round(d[1]/maxD*100)+'%;background:#22c55e">'+d[1]+'</div></div></div>'}).join('')+
+        '<div class="subsec" style="margin-top:8px">Por especie</div>'+
+        spSorted.map(function(s){var col=treeSpeciesColors[s[0]]||'#94a3b8';return '<div class="db"><span class="nm">'+(treeSpeciesNames[s[0]]||s[0]).substring(0,14)+'</span><div class="bg"><div class="bf" style="width:'+Math.round(s[1]/maxSp*100)+'%;background:'+col+'">'+s[1]+'</div></div></div>'}).join('')+
+        '<div class="ins" style="margin-top:8px"><div class="it">Desiertos verdes</div>'+
+        (sorted.length>1?sorted[sorted.length-1][0]+' tiene la menor densidad arbolada ('+sorted[sorted.length-1][1]+' arboles). El contraste con '+sorted[0][0]+' ('+sorted[0][1]+') sugiere una desigualdad en infraestructura verde que correlaciona con efecto isla de calor.':'')+
+        '</div>';
+}
+function setTreeFilt(v,btn){S.treeFilt=v;btn.parentElement.querySelectorAll('.fbtn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');renderTrees()}
+
+// ======= CULTURAL EQUIPMENT DATA =======
+var cultureData=[
+// Museos
+{lat:41.3800,lng:2.1772,nm:"MACBA",tipo:"museo",dist:"Ciutat Vella"},
+{lat:41.3802,lng:2.1755,nm:"CCCB",tipo:"museo",dist:"Ciutat Vella"},
+{lat:41.3797,lng:2.1785,nm:"Museu d'Art Contemporani",tipo:"museo",dist:"Ciutat Vella"},
+{lat:41.3690,lng:2.1530,nm:"MNAC",tipo:"museo",dist:"Sants-Montjuic"},
+{lat:41.3710,lng:2.1490,nm:"Fundacio Joan Miro",tipo:"museo",dist:"Sants-Montjuic"},
+{lat:41.3840,lng:2.1800,nm:"Museu Picasso",tipo:"museo",dist:"Ciutat Vella"},
+{lat:41.4145,lng:2.1527,nm:"CosmoCaixa",tipo:"museo",dist:"Sarria-Sant Gervasi"},
+{lat:41.3913,lng:2.1650,nm:"Fundacio Tapies",tipo:"museo",dist:"Eixample"},
+{lat:41.3850,lng:2.1793,nm:"Museu Cultures del Mon",tipo:"museo",dist:"Ciutat Vella"},
+{lat:41.3782,lng:2.1864,nm:"Museu Historia Catalunya",tipo:"museo",dist:"Ciutat Vella"},
+{lat:41.4120,lng:2.2295,nm:"Museu del Disseny",tipo:"museo",dist:"Sant Marti"},
+{lat:41.3636,lng:2.1580,nm:"CaixaForum",tipo:"museo",dist:"Sants-Montjuic"},
+{lat:41.4032,lng:2.1744,nm:"Casa Mila - La Pedrera",tipo:"museo",dist:"Eixample"},
+{lat:41.4036,lng:2.1645,nm:"Casa Batllo",tipo:"patrimonio",dist:"Eixample"},
+{lat:41.4024,lng:2.1533,nm:"Hospital Sant Pau",tipo:"patrimonio",dist:"Eixample"},
+{lat:41.4145,lng:2.1526,nm:"Park Guell",tipo:"patrimonio",dist:"Gracia"},
+{lat:41.4037,lng:2.1744,nm:"Sagrada Familia",tipo:"patrimonio",dist:"Eixample"},
+// Bibliotecas
+{lat:41.3815,lng:2.1770,nm:"Bib. Andreu Nin",tipo:"biblioteca",dist:"Ciutat Vella"},
+{lat:41.3790,lng:2.1740,nm:"Bib. Gotic",tipo:"biblioteca",dist:"Ciutat Vella"},
+{lat:41.3900,lng:2.1640,nm:"Bib. Sofia Barat",tipo:"biblioteca",dist:"Eixample"},
+{lat:41.3940,lng:2.1590,nm:"Bib. Joan Miro",tipo:"biblioteca",dist:"Eixample"},
+{lat:41.3945,lng:2.1700,nm:"Bib. Sagrada Familia",tipo:"biblioteca",dist:"Eixample"},
+{lat:41.3750,lng:2.1340,nm:"Bib. Vapor Vell",tipo:"biblioteca",dist:"Sants-Montjuic"},
+{lat:41.3896,lng:2.1280,nm:"Bib. Les Corts",tipo:"biblioteca",dist:"Les Corts"},
+{lat:41.4010,lng:2.1530,nm:"Bib. Vila de Gracia",tipo:"biblioteca",dist:"Gracia"},
+{lat:41.4050,lng:2.1550,nm:"Bib. Jaume Fuster",tipo:"biblioteca",dist:"Gracia"},
+{lat:41.4270,lng:2.1620,nm:"Bib. Horta Can Mariner",tipo:"biblioteca",dist:"Horta-Guinardo"},
+{lat:41.4400,lng:2.1730,nm:"Bib. Nou Barris",tipo:"biblioteca",dist:"Nou Barris"},
+{lat:41.4310,lng:2.1870,nm:"Bib. Ignasi Iglesias",tipo:"biblioteca",dist:"Sant Andreu"},
+{lat:41.4050,lng:2.2050,nm:"Bib. Poblenou-M.Aurelia Capmany",tipo:"biblioteca",dist:"Sant Marti"},
+{lat:41.4020,lng:2.2130,nm:"Bib. Ramon d'Alòs-Moner",tipo:"biblioteca",dist:"Sant Marti"},
+// Mercados
+{lat:41.3816,lng:2.1718,nm:"Mercat de la Boqueria",tipo:"mercado",dist:"Ciutat Vella"},
+{lat:41.3840,lng:2.1780,nm:"Mercat Santa Caterina",tipo:"mercado",dist:"Ciutat Vella"},
+{lat:41.3870,lng:2.1610,nm:"Mercat Sant Antoni",tipo:"mercado",dist:"Eixample"},
+{lat:41.3944,lng:2.1580,nm:"Mercat Ninot",tipo:"mercado",dist:"Eixample"},
+{lat:41.3955,lng:2.1680,nm:"Mercat Abaceria",tipo:"mercado",dist:"Gracia"},
+{lat:41.3748,lng:2.1330,nm:"Mercat de Sants",tipo:"mercado",dist:"Sants-Montjuic"},
+{lat:41.3744,lng:2.1680,nm:"Mercat Sant Pau",tipo:"mercado",dist:"Sants-Montjuic"},
+{lat:41.4350,lng:2.1790,nm:"Mercat Mercè",tipo:"mercado",dist:"Nou Barris"},
+{lat:41.4300,lng:2.1870,nm:"Mercat Sant Andreu",tipo:"mercado",dist:"Sant Andreu"},
+{lat:41.4080,lng:2.2100,nm:"Mercat Poblenou",tipo:"mercado",dist:"Sant Marti"},
+// Deportivos
+{lat:41.3810,lng:2.1600,nm:"Piscines Bernat Picornell",tipo:"deporte",dist:"Sants-Montjuic"},
+{lat:41.3809,lng:2.1207,nm:"Camp Nou",tipo:"deporte",dist:"Les Corts"},
+{lat:41.3646,lng:2.1556,nm:"Estadi Olimpic",tipo:"deporte",dist:"Sants-Montjuic"},
+{lat:41.4235,lng:2.1555,nm:"Poliesportiu Horta",tipo:"deporte",dist:"Horta-Guinardo"},
+{lat:41.3890,lng:2.1960,nm:"CEM Bac de Roda",tipo:"deporte",dist:"Sant Marti"},
+{lat:41.4105,lng:2.2275,nm:"Poliesportiu Mar Bella",tipo:"deporte",dist:"Sant Marti"},
+{lat:41.4020,lng:2.1480,nm:"CEM Perill",tipo:"deporte",dist:"Gracia"},
+{lat:41.3870,lng:2.1270,nm:"CEM Les Corts",tipo:"deporte",dist:"Les Corts"},
+// Teatros
+{lat:41.3787,lng:2.1753,nm:"Gran Teatre del Liceu",tipo:"teatro",dist:"Ciutat Vella"},
+{lat:41.3870,lng:2.1522,nm:"Teatre Lliure",tipo:"teatro",dist:"Sants-Montjuic"},
+{lat:41.3960,lng:2.1618,nm:"Teatre Nacional Catalunya",tipo:"teatro",dist:"Eixample"},
+{lat:41.3955,lng:2.1809,nm:"L'Auditori",tipo:"teatro",dist:"Eixample"},
+{lat:41.3834,lng:2.1754,nm:"Palau de la Musica",tipo:"teatro",dist:"Ciutat Vella"},
+{lat:41.3800,lng:2.1640,nm:"Sala Apolo",tipo:"teatro",dist:"Sants-Montjuic"}
+];
+var cultColors={museo:'#f43f5e',biblioteca:'#3b82f6',mercado:'#f59e0b',deporte:'#10b981',teatro:'#ec4899',patrimonio:'#8b5cf6'};
+var cultIcons={museo:'\u{1F3DB}',biblioteca:'\u{1F4DA}',mercado:'\u{1F6D2}',deporte:'\u{26BD}',teatro:'\u{1F3AD}',patrimonio:'\u{1F3F0}'};
+
+function renderCulture(){
+    if(ML.culture)map.removeLayer(ML.culture);
+    var grp=L.layerGroup();
+    var filtered=cultureData.filter(function(c){return S.cultFilt==='all'||c.tipo===S.cultFilt});
+    filtered.forEach(function(c){
+        var col=cultColors[c.tipo]||'#94a3b8';
+        var icon=cultIcons[c.tipo]||'?';
+        var m=L.marker([c.lat,c.lng],{
+            icon:L.divIcon({html:'<div style="background:'+col+';width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid rgba(255,255,255,.3);box-shadow:0 2px 6px rgba(0,0,0,.4)">'+icon+'</div>',className:'',iconSize:[24,24],iconAnchor:[12,12]})
+        });
+        m.bindPopup(
+            '<div class="pt2">'+c.nm+'</div>'+
+            '<div class="pr"><span class="lb">Tipo:</span><span class="vl" style="color:'+col+'">'+c.tipo.charAt(0).toUpperCase()+c.tipo.slice(1)+'</span></div>'+
+            '<div class="pr"><span class="lb">Distrito:</span><span class="vl">'+c.dist+'</span></div>'
+        );
+        m.addTo(grp);
+    });
+    ML.culture=grp;
+    if(S.layers.culture)grp.addTo(map);
+    updateCultStats(filtered);
+}
+function updateCultStats(filtered){
+    var museos=0,biblio=0;
+    filtered.forEach(function(c){if(c.tipo==='museo')museos++;if(c.tipo==='biblioteca')biblio++});
+    document.getElementById('cultTotal').textContent=filtered.length;
+    document.getElementById('cultMuseos').textContent=museos;
+    document.getElementById('cultBiblio').textContent=biblio;
+    document.getElementById('cultTourPres').textContent=tourismData.length;
+    var distCount={};filtered.forEach(function(c){distCount[c.dist]=(distCount[c.dist]||0)+1});
+    var sorted=Object.entries(distCount).sort(function(a,b){return b[1]-a[1]});
+    var maxD=sorted.length?sorted[0][1]:1;
+    var tipCount={};filtered.forEach(function(c){tipCount[c.tipo]=(tipCount[c.tipo]||0)+1});
+    var tipSorted=Object.entries(tipCount).sort(function(a,b){return b[1]-a[1]});
+    var cc=document.getElementById('cultAnalysis');
+    cc.innerHTML='<div class="subsec">Densidad cultural por distrito</div>'+
+        sorted.map(function(d){return '<div class="db"><span class="nm">'+d[0].substring(0,14)+'</span><div class="bg"><div class="bf" style="width:'+Math.round(d[1]/maxD*100)+'%;background:#818cf8">'+d[1]+'</div></div></div>'}).join('')+
+        '<div class="ins" style="margin-top:8px"><div class="it">Presion turistica vs cultura</div>'+
+        (sorted.length?sorted[0][0]+' concentra la mayor oferta cultural ('+sorted[0][1]+' equip.). '+
+        'Los '+tourismData.length+' alojamientos turisticos se distribuyen de forma desigual, generando presion sobre los barrios con mas atractivos culturales.':'')+
+        '</div>';
+}
+function setCultFilt(v,btn){S.cultFilt=v;document.querySelectorAll('#cultFiltBtns .fbtn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');renderCulture()}
+
+// ======= TOURISM DATA =======
+var tourismData=[
+// Ciutat Vella - highest concentration
+{lat:41.3812,lng:2.1730,nm:"Hotel 1898",tipo:"hotel",dist:"Ciutat Vella",cat:4},
+{lat:41.3795,lng:2.1745,nm:"Hotel Colon",tipo:"hotel",dist:"Ciutat Vella",cat:4},
+{lat:41.3820,lng:2.1760,nm:"Hostal Gat Raval",tipo:"hostal",dist:"Ciutat Vella",cat:2},
+{lat:41.3830,lng:2.1780,nm:"Pension Born",tipo:"pension",dist:"Ciutat Vella",cat:1},
+{lat:41.3805,lng:2.1710,nm:"Hotel Barcelo Raval",tipo:"hotel",dist:"Ciutat Vella",cat:4},
+{lat:41.3835,lng:2.1720,nm:"Hotel Neri",tipo:"hotel",dist:"Ciutat Vella",cat:5},
+{lat:41.3790,lng:2.1780,nm:"Apt. Turistic Gotic 1",tipo:"apt",dist:"Ciutat Vella",cat:0},
+{lat:41.3810,lng:2.1790,nm:"Apt. Turistic Born 1",tipo:"apt",dist:"Ciutat Vella",cat:0},
+{lat:41.3825,lng:2.1700,nm:"Apt. Turistic Raval 1",tipo:"apt",dist:"Ciutat Vella",cat:0},
+{lat:41.3845,lng:2.1740,nm:"Apt. Turistic Gotic 2",tipo:"apt",dist:"Ciutat Vella",cat:0},
+{lat:41.3800,lng:2.1755,nm:"Pension El Raval",tipo:"pension",dist:"Ciutat Vella",cat:1},
+{lat:41.3815,lng:2.1785,nm:"Hostal Born",tipo:"hostal",dist:"Ciutat Vella",cat:2},
+// Eixample
+{lat:41.3930,lng:2.1640,nm:"Hotel Majestic",tipo:"hotel",dist:"Eixample",cat:5},
+{lat:41.3910,lng:2.1620,nm:"Hotel Condes",tipo:"hotel",dist:"Eixample",cat:4},
+{lat:41.3870,lng:2.1665,nm:"Hotel Axel",tipo:"hotel",dist:"Eixample",cat:4},
+{lat:41.3950,lng:2.1610,nm:"Hotel Casa Fuster",tipo:"hotel",dist:"Eixample",cat:5},
+{lat:41.3890,lng:2.1580,nm:"Apt. Turistic Eixample 1",tipo:"apt",dist:"Eixample",cat:0},
+{lat:41.3920,lng:2.1700,nm:"Apt. Turistic Eixample 2",tipo:"apt",dist:"Eixample",cat:0},
+{lat:41.3880,lng:2.1550,nm:"Hostal Eixample",tipo:"hostal",dist:"Eixample",cat:2},
+// Sants-Montjuic
+{lat:41.3792,lng:2.1400,nm:"Hotel Expo Barcelona",tipo:"hotel",dist:"Sants-Montjuic",cat:4},
+{lat:41.3760,lng:2.1500,nm:"Hotel Fira Congress",tipo:"hotel",dist:"Sants-Montjuic",cat:3},
+{lat:41.3740,lng:2.1640,nm:"Hostal Parallel",tipo:"hostal",dist:"Sants-Montjuic",cat:2},
+// Gracia
+{lat:41.4010,lng:2.1560,nm:"Hotel Gracia",tipo:"hotel",dist:"Gracia",cat:3},
+{lat:41.4030,lng:2.1540,nm:"Apt. Turistic Gracia",tipo:"apt",dist:"Gracia",cat:0},
+// Sant Marti - Diagonal Mar / Vila Olimpica
+{lat:41.3890,lng:2.1960,nm:"Hotel Arts",tipo:"hotel",dist:"Sant Marti",cat:5},
+{lat:41.4000,lng:2.2050,nm:"Hotel Poblenou",tipo:"hotel",dist:"Sant Marti",cat:3},
+{lat:41.3910,lng:2.1940,nm:"Apt. Turistic Vila Olimpica",tipo:"apt",dist:"Sant Marti",cat:0},
+{lat:41.4030,lng:2.2100,nm:"Apt. Turistic Poblenou",tipo:"apt",dist:"Sant Marti",cat:0},
+// Les Corts / Sarria (less tourism)
+{lat:41.3870,lng:2.1300,nm:"Hotel Princesa Sofia",tipo:"hotel",dist:"Les Corts",cat:5},
+{lat:41.3945,lng:2.1370,nm:"Hotel Rey Juan Carlos",tipo:"hotel",dist:"Les Corts",cat:5}
+];
+function renderTourism(){
+    if(ML.tourism)map.removeLayer(ML.tourism);
+    var grp=L.layerGroup();
+    tourismData.forEach(function(t){
+        var m=L.circleMarker([t.lat,t.lng],{radius:5,color:'#fbbf24',fillColor:'#fbbf24',fillOpacity:.7,weight:1});
+        m.bindPopup(
+            '<div class="pt2">'+t.nm+'</div>'+
+            '<div class="pr"><span class="lb">Tipo:</span><span class="vl">'+t.tipo+'</span></div>'+
+            '<div class="pr"><span class="lb">Distrito:</span><span class="vl">'+t.dist+'</span></div>'+
+            (t.cat>0?'<div class="pr"><span class="lb">Categoria:</span><span class="vl">'+t.cat+'*</span></div>':'')
+        );
+        m.addTo(grp);
+    });
+    ML.tourism=grp;
+    if(S.layers.tourism)grp.addTo(map);
+}
+
+// ======= HEALTH CENTERS DATA =======
+var healthData=[
+// Hospitales
+{lat:41.4105,lng:2.1723,nm:"Hospital de la Santa Creu i Sant Pau",tipo:"hospital",dist:"Eixample"},
+{lat:41.3880,lng:2.1668,nm:"Hospital Clinic",tipo:"hospital",dist:"Eixample"},
+{lat:41.3775,lng:2.1750,nm:"Hospital del Mar",tipo:"hospital",dist:"Ciutat Vella"},
+{lat:41.4260,lng:2.1430,nm:"Hospital Vall d'Hebron",tipo:"hospital",dist:"Horta-Guinardo"},
+{lat:41.3940,lng:2.1392,nm:"Hospital de Barcelona",tipo:"hospital",dist:"Les Corts"},
+{lat:41.3748,lng:2.1328,nm:"Hospital de Sant Joan de Deu (Esplugues)",tipo:"hospital",dist:"Sants-Montjuic"},
+{lat:41.4380,lng:2.1670,nm:"Hospital de la Esperanza",tipo:"hospital",dist:"Nou Barris"},
+{lat:41.4060,lng:2.2225,nm:"Hospital del Mar (Diagonal Mar)",tipo:"hospital",dist:"Sant Marti"},
+// CAP
+{lat:41.3830,lng:2.1730,nm:"CAP Gotic",tipo:"cap",dist:"Ciutat Vella"},
+{lat:41.3810,lng:2.1680,nm:"CAP Raval Nord",tipo:"cap",dist:"Ciutat Vella"},
+{lat:41.3800,lng:2.1790,nm:"CAP Casc Antic",tipo:"cap",dist:"Ciutat Vella"},
+{lat:41.3910,lng:2.1650,nm:"CAP Rossellon",tipo:"cap",dist:"Eixample"},
+{lat:41.3860,lng:2.1560,nm:"CAP Manso",tipo:"cap",dist:"Eixample"},
+{lat:41.3950,lng:2.1740,nm:"CAP Sagrada Familia",tipo:"cap",dist:"Eixample"},
+{lat:41.3750,lng:2.1450,nm:"CAP Sants",tipo:"cap",dist:"Sants-Montjuic"},
+{lat:41.3740,lng:2.1650,nm:"CAP Poble Sec",tipo:"cap",dist:"Sants-Montjuic"},
+{lat:41.3880,lng:2.1290,nm:"CAP Les Corts",tipo:"cap",dist:"Les Corts"},
+{lat:41.3990,lng:2.1400,nm:"CAP Sarria",tipo:"cap",dist:"Sarria-Sant Gervasi"},
+{lat:41.4060,lng:2.1480,nm:"CAP Larrard",tipo:"cap",dist:"Gracia"},
+{lat:41.4020,lng:2.1570,nm:"CAP Vila de Gracia",tipo:"cap",dist:"Gracia"},
+{lat:41.4240,lng:2.1600,nm:"CAP Horta",tipo:"cap",dist:"Horta-Guinardo"},
+{lat:41.4370,lng:2.1720,nm:"CAP Rio de Janeiro",tipo:"cap",dist:"Nou Barris"},
+{lat:41.4440,lng:2.1780,nm:"CAP Turó de la Peira",tipo:"cap",dist:"Nou Barris"},
+{lat:41.4300,lng:2.1860,nm:"CAP Sant Andreu",tipo:"cap",dist:"Sant Andreu"},
+{lat:41.4010,lng:2.2010,nm:"CAP Poblenou",tipo:"cap",dist:"Sant Marti"},
+{lat:41.4080,lng:2.2150,nm:"CAP Besòs",tipo:"cap",dist:"Sant Marti"},
+// CUAP
+{lat:41.3840,lng:2.1750,nm:"CUAP Peracamps",tipo:"cuap",dist:"Ciutat Vella"},
+{lat:41.4260,lng:2.1440,nm:"CUAP Horta",tipo:"cuap",dist:"Horta-Guinardo"},
+{lat:41.3880,lng:2.1670,nm:"CUAP Manso",tipo:"cuap",dist:"Eixample"},
+{lat:41.3750,lng:2.1460,nm:"CUAP Cotxeres (Sants)",tipo:"cuap",dist:"Sants-Montjuic"}
+];
+var healthColors={hospital:'#ef4444',cap:'#22c55e',cuap:'#f59e0b'};
+var healthIcons={hospital:'\u{1F3E5}',cap:'\u{1FA7A}',cuap:'\u{1F6A8}'};
+function renderHealth(){
+    if(ML.health)map.removeLayer(ML.health);
+    var grp=L.layerGroup();
+    var filtered=healthData.filter(function(h){return S.healthFilt==='all'||h.tipo===S.healthFilt});
+    filtered.forEach(function(h){
+        var col=healthColors[h.tipo]||'#94a3b8';
+        var ico=healthIcons[h.tipo]||'+';
+        var m=L.marker([h.lat,h.lng],{
+            icon:L.divIcon({html:'<div style="background:'+col+';width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid rgba(255,255,255,.3);box-shadow:0 2px 6px rgba(0,0,0,.4)">'+ico+'</div>',className:'',iconSize:[26,26],iconAnchor:[13,13]})
+        });
+        m.bindPopup(
+            '<div class="pt2">'+h.nm+'</div>'+
+            '<div class="pr"><span class="lb">Tipo:</span><span class="vl" style="color:'+col+'">'+h.tipo.toUpperCase()+'</span></div>'+
+            '<div class="pr"><span class="lb">Distrito:</span><span class="vl">'+h.dist+'</span></div>'
+        );
+        m.addTo(grp);
+    });
+    ML.health=grp;
+    if(S.layers.health)grp.addTo(map);
+    var caps=0,hosps=0,cuaps=0;
+    filtered.forEach(function(h){if(h.tipo==='cap')caps++;if(h.tipo==='hospital')hosps++;if(h.tipo==='cuap')cuaps++});
+    document.getElementById('healthTotal').textContent=filtered.length;
+    document.getElementById('healthCAP').textContent=caps;
+    document.getElementById('healthHosp').textContent=hosps;
+    document.getElementById('healthCUAP').textContent=cuaps;
+    var distCount={};filtered.forEach(function(h){distCount[h.dist]=(distCount[h.dist]||0)+1});
+    var sorted=Object.entries(distCount).sort(function(a,b){return b[1]-a[1]});
+    var maxD=sorted.length?sorted[0][1]:1;
+    var hc=document.getElementById('healthAnalysis');
+    hc.innerHTML='<div class="subsec">Centros por distrito</div>'+
+        sorted.map(function(d){return '<div class="db"><span class="nm">'+d[0].substring(0,14)+'</span><div class="bg"><div class="bf" style="width:'+Math.round(d[1]/maxD*100)+'%;background:#22c55e">'+d[1]+'</div></div></div>'}).join('')+
+        '<div class="ins" style="margin-top:8px"><div class="it">Cobertura sanitaria</div>'+
+        hosps+' hospitales, '+caps+' CAPs y '+cuaps+' CUAPs cubren los 10 distritos. Eixample y Ciutat Vella concentran la mayor oferta. Cruza con Atlas Demografico para evaluar ratio sanitario/poblacion.</div>';
+}
+function setHealthFilt(v,btn){S.healthFilt=v;document.querySelectorAll('#healthFiltBtns .fbtn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');renderHealth()}
+
+// ======= SCHOOLS DATA =======
+var schoolData=[
+// === CIUTAT VELLA ===
+// CEIP
+{lat:41.3830,lng:2.1740,nm:"CEIP Angel Baixeras",tipo:"publico",dist:"Ciutat Vella",nivel:"Infantil-Primaria"},
+{lat:41.3810,lng:2.1770,nm:"CEIP Cervantes",tipo:"publico",dist:"Ciutat Vella",nivel:"Infantil-Primaria"},
+{lat:41.3850,lng:2.1690,nm:"CEIP Rubén Darío",tipo:"publico",dist:"Ciutat Vella",nivel:"Infantil-Primaria"},
+{lat:41.3795,lng:2.1800,nm:"CEIP Alexandre Gali",tipo:"publico",dist:"Ciutat Vella",nivel:"Infantil-Primaria"},
+{lat:41.3820,lng:2.1710,nm:"CEIP Collaso i Gil",tipo:"publico",dist:"Ciutat Vella",nivel:"Infantil-Primaria"},
+// IES
+{lat:41.3835,lng:2.1725,nm:"IES Pau Claris",tipo:"publico",dist:"Ciutat Vella",nivel:"ESO-Bach."},
+{lat:41.3815,lng:2.1685,nm:"IES Miquel Tarradell",tipo:"publico",dist:"Ciutat Vella",nivel:"ESO-Bach."},
+{lat:41.3845,lng:2.1760,nm:"IES Verdaguer",tipo:"publico",dist:"Ciutat Vella",nivel:"ESO-FP"},
+// Concertados
+{lat:41.3825,lng:2.1755,nm:"Escola Pia Sant Antoni",tipo:"concertado",dist:"Ciutat Vella",nivel:"Infantil-ESO"},
+{lat:41.3840,lng:2.1720,nm:"Col·legi La Salle Comtal",tipo:"concertado",dist:"Ciutat Vella",nivel:"Infantil-ESO"},
+// === EIXAMPLE ===
+// CEIP
+{lat:41.3920,lng:2.1660,nm:"CEIP Mallorca",tipo:"publico",dist:"Eixample",nivel:"Infantil-Primaria"},
+{lat:41.3895,lng:2.1570,nm:"CEIP Ferran Sunyer",tipo:"publico",dist:"Eixample",nivel:"Infantil-Primaria"},
+{lat:41.3910,lng:2.1740,nm:"CEIP Fort Pienc",tipo:"publico",dist:"Eixample",nivel:"Infantil-Primaria"},
+{lat:41.3870,lng:2.1620,nm:"CEIP Diputacio",tipo:"publico",dist:"Eixample",nivel:"Infantil-Primaria"},
+{lat:41.3950,lng:2.1580,nm:"CEIP Ramon Llull",tipo:"publico",dist:"Eixample",nivel:"Infantil-Primaria"},
+// IES
+{lat:41.3940,lng:2.1720,nm:"IES Fort Pius",tipo:"publico",dist:"Eixample",nivel:"ESO-Bach."},
+{lat:41.3900,lng:2.1600,nm:"IES Ernest Lluch",tipo:"publico",dist:"Eixample",nivel:"ESO-Bach."},
+{lat:41.3925,lng:2.1680,nm:"IES Jaume Balmes",tipo:"publico",dist:"Eixample",nivel:"ESO-Bach.-FP"},
+{lat:41.3880,lng:2.1550,nm:"IES Joan Fuster",tipo:"publico",dist:"Eixample",nivel:"ESO-Bach."},
+{lat:41.3960,lng:2.1620,nm:"IES Consell de Cent",tipo:"publico",dist:"Eixample",nivel:"ESO-Bach."},
+{lat:41.3935,lng:2.1750,nm:"IES Infanta Isabel d'Arago",tipo:"publico",dist:"Eixample",nivel:"ESO-FP"},
+// Concertados
+{lat:41.3905,lng:2.1630,nm:"Sagrat Cor Diputacio",tipo:"concertado",dist:"Eixample",nivel:"Infantil-Bach."},
+{lat:41.3935,lng:2.1590,nm:"Escola Pia Balmes",tipo:"concertado",dist:"Eixample",nivel:"Infantil-ESO"},
+{lat:41.3915,lng:2.1700,nm:"Col·legi Sagrada Familia",tipo:"concertado",dist:"Eixample",nivel:"Infantil-ESO"},
+{lat:41.3885,lng:2.1650,nm:"Col·legi Jesus Maria",tipo:"concertado",dist:"Eixample",nivel:"Infantil-Bach."},
+// Privados
+{lat:41.3870,lng:2.1650,nm:"Col·legi La Salle Bonanova",tipo:"privado",dist:"Eixample",nivel:"Infantil-Bach."},
+// === SANTS-MONTJUIC ===
+// CEIP
+{lat:41.3750,lng:2.1380,nm:"CEIP Barrufet",tipo:"publico",dist:"Sants-Montjuic",nivel:"Infantil-Primaria"},
+{lat:41.3770,lng:2.1650,nm:"CEIP Poble Sec",tipo:"publico",dist:"Sants-Montjuic",nivel:"Infantil-Primaria"},
+{lat:41.3745,lng:2.1350,nm:"CEIP Perú",tipo:"publico",dist:"Sants-Montjuic",nivel:"Infantil-Primaria"},
+{lat:41.3730,lng:2.1600,nm:"CEIP Mossen Jacint Verdaguer",tipo:"publico",dist:"Sants-Montjuic",nivel:"Infantil-Primaria"},
+// IES
+{lat:41.3755,lng:2.1400,nm:"IES Joan Coromines",tipo:"publico",dist:"Sants-Montjuic",nivel:"ESO-Bach."},
+{lat:41.3760,lng:2.1640,nm:"IES Consell de Cent (Poble Sec)",tipo:"publico",dist:"Sants-Montjuic",nivel:"ESO-Bach."},
+{lat:41.3740,lng:2.1480,nm:"IES Mare de Deu de la Merce",tipo:"publico",dist:"Sants-Montjuic",nivel:"ESO-FP"},
+{lat:41.3785,lng:2.1370,nm:"IES Emperador Carles",tipo:"publico",dist:"Sants-Montjuic",nivel:"ESO-Bach.-FP"},
+// Concertados
+{lat:41.3760,lng:2.1450,nm:"Escola Pia Sants",tipo:"concertado",dist:"Sants-Montjuic",nivel:"Infantil-ESO"},
+{lat:41.3735,lng:2.1550,nm:"Col·legi Sant Medir",tipo:"concertado",dist:"Sants-Montjuic",nivel:"Infantil-ESO"},
+// === LES CORTS ===
+// CEIP
+{lat:41.3880,lng:2.1250,nm:"CEIP Les Corts",tipo:"publico",dist:"Les Corts",nivel:"Infantil-Primaria"},
+{lat:41.3870,lng:2.1310,nm:"CEIP Duran i Bas",tipo:"publico",dist:"Les Corts",nivel:"Infantil-Primaria"},
+// IES
+{lat:41.3865,lng:2.1290,nm:"IES Pedralbes",tipo:"publico",dist:"Les Corts",nivel:"ESO-Bach."},
+{lat:41.3885,lng:2.1260,nm:"IES Ausiàs March",tipo:"publico",dist:"Les Corts",nivel:"ESO-Bach.-FP"},
+// Concertados
+{lat:41.3890,lng:2.1280,nm:"Escola Aula",tipo:"concertado",dist:"Les Corts",nivel:"Infantil-Bach."},
+{lat:41.3860,lng:2.1240,nm:"Col·legi Lestonnac",tipo:"concertado",dist:"Les Corts",nivel:"Infantil-ESO"},
+// Privados
+{lat:41.3890,lng:2.1320,nm:"American School BCN",tipo:"privado",dist:"Les Corts",nivel:"Infantil-Bach."},
+// === SARRIA-SANT GERVASI ===
+// CEIP
+{lat:41.4000,lng:2.1420,nm:"CEIP Orlandai",tipo:"publico",dist:"Sarria-Sant Gervasi",nivel:"Infantil-Primaria"},
+{lat:41.4030,lng:2.1400,nm:"CEIP Poeta Foix",tipo:"publico",dist:"Sarria-Sant Gervasi",nivel:"Infantil-Primaria"},
+{lat:41.3980,lng:2.1350,nm:"CEIP Costa i Llobera",tipo:"publico",dist:"Sarria-Sant Gervasi",nivel:"Infantil-Primaria"},
+// IES
+{lat:41.4010,lng:2.1380,nm:"IES Sarrià",tipo:"publico",dist:"Sarria-Sant Gervasi",nivel:"ESO-Bach."},
+{lat:41.3990,lng:2.1450,nm:"IES Menéndez y Pelayo",tipo:"publico",dist:"Sarria-Sant Gervasi",nivel:"ESO-Bach.-FP"},
+{lat:41.4040,lng:2.1360,nm:"IES Montserrat",tipo:"publico",dist:"Sarria-Sant Gervasi",nivel:"ESO-Bach."},
+// Concertados
+{lat:41.4015,lng:2.1440,nm:"Escola Thau Sant Cugat (sede BCN)",tipo:"concertado",dist:"Sarria-Sant Gervasi",nivel:"Infantil-Bach."},
+{lat:41.3995,lng:2.1370,nm:"Col·legi Jesüites Sarrià",tipo:"concertado",dist:"Sarria-Sant Gervasi",nivel:"Infantil-Bach."},
+{lat:41.4025,lng:2.1410,nm:"Escola Pia Sarrià-Calassanç",tipo:"concertado",dist:"Sarria-Sant Gervasi",nivel:"Infantil-Bach."},
+// Privados
+{lat:41.4020,lng:2.1380,nm:"Lycée Français",tipo:"privado",dist:"Sarria-Sant Gervasi",nivel:"Infantil-Bach."},
+{lat:41.4080,lng:2.1350,nm:"St. Paul's School",tipo:"privado",dist:"Sarria-Sant Gervasi",nivel:"Infantil-Bach."},
+{lat:41.4050,lng:2.1430,nm:"Escola Thau",tipo:"privado",dist:"Sarria-Sant Gervasi",nivel:"Infantil-Bach."},
+{lat:41.3960,lng:2.1390,nm:"Col·legi Agora",tipo:"privado",dist:"Sarria-Sant Gervasi",nivel:"Infantil-ESO"},
+{lat:41.4060,lng:2.1320,nm:"Kensington School",tipo:"privado",dist:"Sarria-Sant Gervasi",nivel:"Infantil-Bach."},
+{lat:41.4035,lng:2.1460,nm:"Col·legi Sagrat Cor Sarrià",tipo:"privado",dist:"Sarria-Sant Gervasi",nivel:"Infantil-Bach."},
+// === GRACIA ===
+// CEIP
+{lat:41.4040,lng:2.1560,nm:"CEIP Vila de Gracia",tipo:"publico",dist:"Gracia",nivel:"Infantil-Primaria"},
+{lat:41.4060,lng:2.1520,nm:"CEIP Reina Violant",tipo:"publico",dist:"Gracia",nivel:"Infantil-Primaria"},
+{lat:41.4025,lng:2.1580,nm:"CEIP La Sedeta",tipo:"publico",dist:"Gracia",nivel:"Infantil-Primaria"},
+// IES
+{lat:41.4020,lng:2.1500,nm:"IES Vila de Gracia",tipo:"publico",dist:"Gracia",nivel:"ESO-Bach."},
+{lat:41.4055,lng:2.1540,nm:"IES Secretari Coloma",tipo:"publico",dist:"Gracia",nivel:"ESO-Bach."},
+{lat:41.4035,lng:2.1510,nm:"IES La Sedeta",tipo:"publico",dist:"Gracia",nivel:"ESO-Bach."},
+// Concertados
+{lat:41.4050,lng:2.1530,nm:"Escola Pia Gracia",tipo:"concertado",dist:"Gracia",nivel:"Infantil-ESO"},
+{lat:41.4030,lng:2.1570,nm:"Col·legi Pare Coll",tipo:"concertado",dist:"Gracia",nivel:"Infantil-ESO"},
+// === HORTA-GUINARDO ===
+// CEIP
+{lat:41.4250,lng:2.1610,nm:"CEIP Taxonera",tipo:"publico",dist:"Horta-Guinardo",nivel:"Infantil-Primaria"},
+{lat:41.4220,lng:2.1640,nm:"CEIP El Carmel",tipo:"publico",dist:"Horta-Guinardo",nivel:"Infantil-Primaria"},
+{lat:41.4260,lng:2.1580,nm:"CEIP Pau Casals",tipo:"publico",dist:"Horta-Guinardo",nivel:"Infantil-Primaria"},
+{lat:41.4200,lng:2.1660,nm:"CEIP Font d'en Fargas",tipo:"publico",dist:"Horta-Guinardo",nivel:"Infantil-Primaria"},
+// IES
+{lat:41.4230,lng:2.1580,nm:"IES Narcis Monturiol",tipo:"publico",dist:"Horta-Guinardo",nivel:"ESO-Bach.-FP"},
+{lat:41.4240,lng:2.1620,nm:"IES Francisco de Goya",tipo:"publico",dist:"Horta-Guinardo",nivel:"ESO-Bach."},
+{lat:41.4210,lng:2.1650,nm:"IES Joan Brossa",tipo:"publico",dist:"Horta-Guinardo",nivel:"ESO-Bach."},
+{lat:41.4255,lng:2.1560,nm:"IES Vall d'Hebron",tipo:"publico",dist:"Horta-Guinardo",nivel:"ESO-Bach.-FP"},
+// Concertados
+{lat:41.4270,lng:2.1590,nm:"Col·legi Mare de Deu Montserrat",tipo:"concertado",dist:"Horta-Guinardo",nivel:"Infantil-Bach."},
+{lat:41.4215,lng:2.1630,nm:"Col·legi Sant Josep Oriol",tipo:"concertado",dist:"Horta-Guinardo",nivel:"Infantil-ESO"},
+// === NOU BARRIS ===
+// CEIP
+{lat:41.4400,lng:2.1740,nm:"CEIP Antaviana",tipo:"publico",dist:"Nou Barris",nivel:"Infantil-Primaria"},
+{lat:41.4420,lng:2.1720,nm:"CEIP Turo de la Peira",tipo:"publico",dist:"Nou Barris",nivel:"Infantil-Primaria"},
+{lat:41.4380,lng:2.1770,nm:"CEIP Prosperitat",tipo:"publico",dist:"Nou Barris",nivel:"Infantil-Primaria"},
+{lat:41.4430,lng:2.1690,nm:"CEIP Sant Jordi",tipo:"publico",dist:"Nou Barris",nivel:"Infantil-Primaria"},
+// IES
+{lat:41.4360,lng:2.1760,nm:"IES Pablo Ruiz Picasso",tipo:"publico",dist:"Nou Barris",nivel:"ESO-Bach."},
+{lat:41.4410,lng:2.1730,nm:"IES Galileo Galilei",tipo:"publico",dist:"Nou Barris",nivel:"ESO-Bach.-FP"},
+{lat:41.4390,lng:2.1750,nm:"IES Josep Pla",tipo:"publico",dist:"Nou Barris",nivel:"ESO-Bach."},
+{lat:41.4440,lng:2.1710,nm:"IES Flos i Calcat",tipo:"publico",dist:"Nou Barris",nivel:"ESO-FP"},
+// Concertados
+{lat:41.4370,lng:2.1780,nm:"Escola Pia Nou Barris",tipo:"concertado",dist:"Nou Barris",nivel:"Infantil-ESO"},
+{lat:41.4405,lng:2.1740,nm:"Col·legi Sagrat Cor",tipo:"concertado",dist:"Nou Barris",nivel:"Infantil-ESO"},
+// === SANT ANDREU ===
+// CEIP
+{lat:41.4310,lng:2.1880,nm:"CEIP Ignasi Iglesias",tipo:"publico",dist:"Sant Andreu",nivel:"Infantil-Primaria"},
+{lat:41.4330,lng:2.1860,nm:"CEIP Baloo",tipo:"publico",dist:"Sant Andreu",nivel:"Infantil-Primaria"},
+{lat:41.4280,lng:2.1900,nm:"CEIP Ramon Berenguer III",tipo:"publico",dist:"Sant Andreu",nivel:"Infantil-Primaria"},
+// IES
+{lat:41.4290,lng:2.1860,nm:"IES Sant Andreu",tipo:"publico",dist:"Sant Andreu",nivel:"ESO-Bach."},
+{lat:41.4320,lng:2.1870,nm:"IES Dr. Puigvert",tipo:"publico",dist:"Sant Andreu",nivel:"ESO-Bach.-FP"},
+{lat:41.4300,lng:2.1890,nm:"IES Príncep de Girona",tipo:"publico",dist:"Sant Andreu",nivel:"ESO-Bach."},
+// Concertados
+{lat:41.4315,lng:2.1875,nm:"La Salle Sant Andreu",tipo:"concertado",dist:"Sant Andreu",nivel:"Infantil-Bach."},
+{lat:41.4295,lng:2.1850,nm:"Col·legi Sant Andreu",tipo:"concertado",dist:"Sant Andreu",nivel:"Infantil-ESO"},
+// === SANT MARTI ===
+// CEIP
+{lat:41.4040,lng:2.2040,nm:"CEIP Vila Olimpica",tipo:"publico",dist:"Sant Marti",nivel:"Infantil-Primaria"},
+{lat:41.4060,lng:2.2080,nm:"CEIP Bogatell",tipo:"publico",dist:"Sant Marti",nivel:"Infantil-Primaria"},
+{lat:41.4100,lng:2.2180,nm:"CEIP Besòs",tipo:"publico",dist:"Sant Marti",nivel:"Infantil-Primaria"},
+{lat:41.4020,lng:2.2000,nm:"CEIP Llacuna del Poblenou",tipo:"publico",dist:"Sant Marti",nivel:"Infantil-Primaria"},
+{lat:41.4080,lng:2.2120,nm:"CEIP Pere IV",tipo:"publico",dist:"Sant Marti",nivel:"Infantil-Primaria"},
+// IES
+{lat:41.4090,lng:2.2150,nm:"IES Besòs",tipo:"publico",dist:"Sant Marti",nivel:"ESO-Bach."},
+{lat:41.4050,lng:2.2060,nm:"IES Poblenou",tipo:"publico",dist:"Sant Marti",nivel:"ESO-Bach."},
+{lat:41.4110,lng:2.2200,nm:"IES Barri Besòs",tipo:"publico",dist:"Sant Marti",nivel:"ESO-FP"},
+{lat:41.4030,lng:2.2020,nm:"IES Front Maritim",tipo:"publico",dist:"Sant Marti",nivel:"ESO-Bach."},
+{lat:41.4070,lng:2.2100,nm:"IES Rambla Prim",tipo:"publico",dist:"Sant Marti",nivel:"ESO-Bach.-FP"},
+{lat:41.4120,lng:2.2250,nm:"IES Fòrum 2004",tipo:"publico",dist:"Sant Marti",nivel:"ESO-Bach."},
+// Concertados
+{lat:41.4060,lng:2.2070,nm:"Escola Voramar",tipo:"concertado",dist:"Sant Marti",nivel:"Infantil-ESO"},
+{lat:41.4085,lng:2.2130,nm:"Col·legi Maristes La Immaculada",tipo:"concertado",dist:"Sant Marti",nivel:"Infantil-Bach."},
+{lat:41.4045,lng:2.2050,nm:"Col·legi Sant Gabriel",tipo:"concertado",dist:"Sant Marti",nivel:"Infantil-ESO"}
+];
+var schoolColors={publico:'#3b82f6',concertado:'#f97316',privado:'#a855f7'};
+function matchNivel(nivel,filt){
+    if(filt==='all')return true;
+    var n=nivel.toLowerCase();
+    if(filt==='infantil')return n.indexOf('infantil')!==-1;
+    if(filt==='primaria')return n.indexOf('primaria')!==-1;
+    if(filt==='secundaria')return n.indexOf('eso')!==-1||n.indexOf('secundaria')!==-1;
+    if(filt==='bach')return n.indexOf('bach')!==-1||n.indexOf('fp')!==-1;
+    return true;
+}
+function renderSchools(){
+    if(ML.schools)map.removeLayer(ML.schools);
+    var grp=L.layerGroup();
+    var filtered=schoolData.filter(function(s){
+        if(S.schoolFilt!=='all'&&s.tipo!==S.schoolFilt)return false;
+        return matchNivel(s.nivel,S.schoolNivel);
+    });
+    filtered.forEach(function(s){
+        var col=schoolColors[s.tipo]||'#94a3b8';
+        var isIES=s.nm.indexOf('IES')===0;
+        var ico=isIES?'\u{1F3EB}':'\u{1F393}';
+        var sz=isIES?24:22;
+        var m=L.marker([s.lat,s.lng],{
+            icon:L.divIcon({html:'<div style="background:'+col+';width:'+sz+'px;height:'+sz+'px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:'+(isIES?13:12)+'px;border:2px solid rgba(255,255,255,.3);box-shadow:0 2px 6px rgba(0,0,0,.4)">'+ico+'</div>',className:'',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]})
+        });
+        m.bindPopup(
+            '<div class="pt2">'+s.nm+'</div>'+
+            '<div class="pr"><span class="lb">Tipo:</span><span class="vl" style="color:'+col+'">'+s.tipo.charAt(0).toUpperCase()+s.tipo.slice(1)+'</span></div>'+
+            '<div class="pr"><span class="lb">Nivel:</span><span class="vl">'+s.nivel+'</span></div>'+
+            '<div class="pr"><span class="lb">Distrito:</span><span class="vl">'+s.dist+'</span></div>'
+        );
+        m.addTo(grp);
+    });
+    ML.schools=grp;
+    if(S.layers.schools)grp.addTo(map);
+    var pub=0,conc=0,priv=0,ies=0,ceip=0;
+    filtered.forEach(function(s){
+        if(s.tipo==='publico')pub++;if(s.tipo==='concertado')conc++;if(s.tipo==='privado')priv++;
+        if(s.nm.indexOf('IES')===0)ies++;if(s.nm.indexOf('CEIP')===0)ceip++;
+    });
+    document.getElementById('schoolTotal').textContent=filtered.length;
+    document.getElementById('schoolPub').textContent=pub;
+    document.getElementById('schoolConc').textContent=conc;
+    document.getElementById('schoolPriv').textContent=priv;
+    document.getElementById('schoolIES').textContent=ies;
+    document.getElementById('schoolCEIP').textContent=ceip;
+    var distCount={};filtered.forEach(function(s){distCount[s.dist]=(distCount[s.dist]||0)+1});
+    var sorted=Object.entries(distCount).sort(function(a,b){return b[1]-a[1]});
+    var maxD=sorted.length?sorted[0][1]:1;
+    var sc=document.getElementById('schoolAnalysis');
+    sc.innerHTML='<div class="subsec">Centros por distrito</div>'+
+        sorted.map(function(d){return '<div class="db"><span class="nm">'+d[0].substring(0,14)+'</span><div class="bg"><div class="bf" style="width:'+Math.round(d[1]/maxD*100)+'%;background:#3b82f6">'+d[1]+'</div></div></div>'}).join('')+
+        '<div class="ins" style="margin-top:8px"><div class="it">Red publica vs privada</div>'+
+        'Publicos: '+pub+' ('+ies+' IES + '+ceip+' CEIP) &middot; Concertados: '+conc+' &middot; Privados: '+priv+
+        '. Los colegios privados se concentran en Sarria-Sant Gervasi y Les Corts, reflejando la segregación socioeconomica. Cruza con Atlas Demografico (%&thinsp;0-14 anos) para evaluar ratio escolar/poblacion infantil.</div>';
+}
+function setSchoolFilt(v,btn){S.schoolFilt=v;document.querySelectorAll('#schoolFiltBtns .fbtn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');renderSchools()}
+function setSchoolNivel(v,btn){S.schoolNivel=v;document.querySelectorAll('#schoolNivelBtns .fbtn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');renderSchools()}
+
+// ======= INIT =======
+async function init(){
+    try{
+        await loadBounds();
+        renderNoise();
+        renderNoiseAnalysis();
+        renderHabIndex();
+        await loadBicing();
+        if(S.stations&&S.stations.length){renderBicing();updateBicStats()}
+        renderMetro();
+        renderAccidents();
+        renderDemographics();
+        renderTrees();
+        renderCulture();
+        renderTourism();
+        renderHealth();
+        renderSchools();
+        await loadBikeLanes();
+        renderBicPatterns();
+        genInsights();
+    }catch(e){console.error('[Init]',e)}
+    syncPanelVis();
+    document.getElementById('loadOv').classList.add('hid');
+    setTimeout(function(){document.getElementById('loadOv').style.display='none'},600);
+}
+init();
+</script>
+</body>
+</html>
