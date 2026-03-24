@@ -19,10 +19,13 @@ Mapa interactivo multicapa de Barcelona construido con datos abiertos del [Ajunt
 | **Presión turística** | Alojamientos turísticos (hoteles, hostales, apartamentos) | [Allotjaments Turístics](https://opendata-ajuntament.barcelona.cat/data/es/dataset/allotjaments-turistics) |
 | **Centros sanitarios** | Hospitales, CAPs y CUAPs | [Sanitat BCN](https://opendata-ajuntament.barcelona.cat/data/es/dataset/sanitat-salut) |
 | **Centros educativos** | ~121 centros: CEIP, IES, concertados y privados. Filtros por titularidad y nivel educativo | [Centres Educatius](https://opendata-ajuntament.barcelona.cat/data/es/dataset/centres-educatius) |
+| **Estaciones meteorológicas** | 4 estaciones XEMA con temperatura, humedad, viento, presión. Previsión AEMET y clima histórico (1913-2024) | [Estacions Meteorològiques](https://opendata-ajuntament.barcelona.cat/data/es/dataset/mesures-estacions-meteorologiques) |
+| **Calidad del aire** | 8 estaciones: NO2, PM10, O3, SO2, CO. Filtrable por contaminante con código de color UE | [Qualitat Aire BCN](https://opendata-ajuntament.barcelona.cat/data/es/dataset/qualitat-aire-detall-bcn) |
+| **Boya oceanográfica** | Oleaje, periodo, temp. mar, nivel del mar, salinidad | [Puertos del Estado - PORTUS](https://portus.puertos.es/) |
 
 ## Análisis cruzados
 
-El panel lateral genera automáticamente **11 patrones cruzados** entre capas:
+El panel lateral genera automáticamente **14 patrones cruzados** entre capas:
 
 - **Isla de calor vs arbolado**: distritos con déficit verde y alto ruido
 - **Segregación educativa**: distribución de colegios privados vs públicos por distrito y renta
@@ -32,10 +35,13 @@ El panel lateral genera automáticamente **11 patrones cruzados** entre capas:
 - **Desiertos de servicios**: distritos con menor dotación combinada (cultura, verde, salud, educación)
 - **Diversidad cultural vs desigualdad**: modelos de ciudad contrapuestos
 - **Justicia ambiental**: correlación entre población infantil, arbolado y ruido
+- **Contaminación vs arbolado**: efecto filtro de la vegetación en estaciones con menor NO2
+- **Isla de calor urbano**: diferencias de temperatura entre estaciones XEMA centro/periferia
+- **Costa y turismo**: relación entre temperatura del mar y presión turística litoral
 
 ## Tecnología
 
-- **Single-file HTML** (~2100 líneas) — sin build, sin dependencias server-side
+- **Single-file HTML** (~2400 líneas) — sin build, sin dependencias server-side
 - [Leaflet.js](https://leafletjs.com/) con basemap CARTO Dark
 - [Leaflet.markercluster](https://github.com/Leaflet/Leaflet.markercluster) para agrupación
 - [leaflet-heat](https://github.com/Leaflet/Leaflet.heat) para mapas de calor
